@@ -2,8 +2,7 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import Program
-from kernels import MATMUL_KERNEL
-
+from backends.kernels import MATMUL_KERNEL
 
 
 class OpenCLBackend:
