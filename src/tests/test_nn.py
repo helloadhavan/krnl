@@ -3,7 +3,7 @@ import numpy as np
 
 import nn
 from src.backends.tensor import Tensor
-from nn import Linear, ReLU
+from nn import Linear, ReLU, optim
 
 
 class EqualityModel:
@@ -118,11 +118,11 @@ def main():
 
     model = EqualityModel()
 
-    optimizer = SGD(
+    optimizer = optim.Adam(
         model.parameters(),
-        learning_rate=0.01,
+        learning_rate=0.1,
     )
-    criterion = nn.MAELoss()
+    criterion = nn.loss.MSELoss()
 
     dataset = create_dataset()
 
