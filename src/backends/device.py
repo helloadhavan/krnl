@@ -4,7 +4,6 @@ from typing import Literal
 from src.backends.GPU_processer import get_gpu_info
 
 
-
 cpu_freq = psutil.cpu_freq()
 max_clock = cpu_freq.max if cpu_freq else 0
 virtual_mem = psutil.virtual_memory()

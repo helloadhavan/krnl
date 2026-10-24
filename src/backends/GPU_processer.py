@@ -42,7 +42,7 @@ class OpenCLBackend:
         data = np.ascontiguousarray(data)
         return cl_array.to_device(self.queue, data)
 
-    def add(self, a: cl_array.Array, b: cl_array.Array):
+    def __add__(self, a: cl_array.Array, b: cl_array.Array):
         if a.shape != b.shape:
             raise ValueError("Tensor shapes must match")
         if a.dtype != b.dtype:
@@ -54,7 +54,7 @@ class OpenCLBackend:
 
         return result
 
-    def multiply(self, a: cl_array.Array, b: cl_array.Array):
+    def __mul__(self, a: cl_array.Array, b: cl_array.Array):
         if a.shape != b.shape:
             raise ValueError("Tensor shapes must match")
         if a.dtype != b.dtype:
@@ -66,7 +66,7 @@ class OpenCLBackend:
 
         return result
 
-    def subtract(self, a: cl_array.Array, b: cl_array.Array):
+    def __sub__(self, a: cl_array.Array, b: cl_array.Array):
         if a.shape != b.shape:
             raise ValueError("Tensor shapes must match")
         if a.dtype != b.dtype:
@@ -78,7 +78,7 @@ class OpenCLBackend:
 
         return result
 
-    def matmul(self, a: cl_array.Array, b: cl_array.Array):
+    def __matmul__(self, a: cl_array.Array, b: cl_array.Array):
         if len(a.shape) != 2 or len(b.shape) != 2:
             raise ValueError("matmul requires two 2D tensors")
 
