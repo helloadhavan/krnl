@@ -1,38 +1,36 @@
 # krnl
 
-krnl is a lightweight Python library for experimenting with tensor operations, automatic differentiation, and device-aware execution. It is designed as a small educational framework for working with NumPy-backed CPU tensors and an OpenCL-backed GPU backend.
+krnl is a compact, experimental machine learning library built in Python with NumPy and OpenCL. It is designed for learning how tensor libraries work, how automatic differentiation is implemented, and how CPU/GPU execution can be exposed through a very small API.
 
-The project currently focuses on:
+This project is intentionally lightweight and educational rather than production-ready. It focuses on the core ideas behind modern ML frameworks: tensors, computational graphs, gradients, and simple device-aware execution.
 
-- Tensor math with basic autograd support
-- CPU execution using NumPy
-- GPU execution using PyOpenCL
-- Simple training-style examples using gradient descent
-- A minimal device abstraction for CPU and GPU selection
+## Why krnl?
+
+- Small and easy to understand
+- Built around a custom `Tensor` abstraction
+- Supports automatic differentiation for simple training loops
+- Works on CPU via NumPy
+- Can use OpenCL for GPU-backed operations
+- Suitable for experimentation, research, and learning
 
 ## Features
 
-- Custom `Tensor` class with basic forward and backward pass support
-- Element-wise addition and multiplication
-- Scalar power operations
-- Gradient accumulation for simple learning tasks
-- OpenCL backend for float32 GPU arrays
-- Matrix multiplication via a custom OpenCL kernel
-- CPU/GPU device metadata access
-
-## Project status
-
-This repository is a small experimental library rather than a production-ready deep learning framework. It is useful for learning how a tensor library is structured, how autograd works, and how OpenCL can be used for accelerated numeric workloads.
-
-## Requirements
-
-- Python 3.12+
-- NumPy
-- PyOpenCL
-- psutil
-- An OpenCL-compatible GPU runtime (for GPU execution)
+- Custom tensor implementation with forward and backward passes
+- Element-wise arithmetic for scalar and array operations
+- Gradient accumulation for training-style workflows
+- Scalar loss computation and optimization using backpropagation
+- Minimal device abstraction for CPU and GPU selection
+- OpenCL backend for float32 GPU computations
+- Simple neural network building blocks such as `Linear` and `ReLU`
 
 ## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/helloadhavan/krnl.git
+cd krnl
+```
 
 Create and activate a virtual environment:
 
@@ -47,44 +45,11 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-If you want to install the main libraries manually:
+### Optional GPU setup
 
-```bash
-pip install numpy pyopencl psutil
-```
+To use the OpenCL backend, make sure your system has a valid OpenCL runtime and compatible GPU drivers installed.
 
-> OpenCL support depends on the host system having a valid OpenCL runtime and compatible GPU drivers installed.
-
-## Repository structure
-
-```text
-krnl/
-├── README.md
-├── requirements.txt
-├── version.txt
-└── src/
-    ├── backends/
-    │   ├── GPU_processer.py
-    │   ├── device.py
-    │   ├── kernels.py
-    │   └── tensor.py
-    └── tests/
-        ├── test_opencl_backend.py
-        ├── test_simple_model_implementation.py
-        └── test_tensor.py
-```
-
-## Core components
-
-### Tensor class
-
-The `src/backends/tensor.py` module defines a minimal tensor implementation with automatic differentiation. It supports:
-
-- `+`, `-`, `*`, and `**` operations
-- gradient accumulation via `backward()`
-- scalar loss-based optimization routines
-
-Example:
+## Quick start
 
 ```python
 from src.backends.tensor import Tensor
@@ -103,65 +68,59 @@ print(w.grad)
 print(b.grad)
 ```
 
+This example creates a small computational graph, computes a scalar loss, and backpropagates gradients through the graph.
+
+## Core components
+
+### Tensor
+
+The `Tensor` class is the foundation of the library. It stores data, tracks device placement, and supports differentiation through custom `__add__`, `__sub__`, `__mul__`, and `__pow__` implementations. The library also includes a `backward()` method for reverse-mode autodiff.
+
 ### Device abstraction
 
-The `Device` class in `src/backends/device.py` provides a simple interface for representing CPU or GPU devices. It can report hardware information and is used by the tensor layer to choose an execution target.
+The `Device` class provides a simple CPU/GPU abstraction. It lets the rest of the library reason about where a tensor should be computed and what hardware features are available.
 
 ### OpenCL backend
 
-The GPU backend in `src/backends/GPU_processer.py` uses PyOpenCL to:
+The GPU path uses PyOpenCL to upload arrays to the device, perform operations, and run a basic matrix multiplication kernel. This makes the project useful for learning how accelerator-backed tensor operations fit into a small ML stack.
 
-- create an OpenCL context and command queue
-- upload NumPy arrays to the GPU
-- perform element-wise add/multiply
-- run matrix multiplication with a custom OpenCL kernel
+### Neural network utilities
 
-Example:
+The project includes a minimal `src/nn` layer for building simple modules, including:
 
-```python
-import numpy as np
-from src.backends.GPU_processer import OpenCLBackend
+- `Module`
+- `Parameter`
+- `Linear`
+- `ReLU`
 
-backend = OpenCLBackend()
+These utilities are intentionally simple and easy to trace through when learning how training loops and model building blocks work.
 
-a = backend.upload(np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
-b = backend.upload(np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32))
+## Repository structure
 
-print(backend.add(a, b))
-print(backend.multiply(a, b))
-print(backend.matmul(a, b))
+```text
+krnl/
+├── README.md
+├── __init__.py
+├── requirements.txt
+├── version.txt
+├── src/
+│   ├── backends/
+│   │   ├── GPU_processer.py
+│   │   ├── __init__.py
+│   │   ├── device.py
+│   │   ├── kernels.py
+│   │   └── tensor.py
+│   ├── nn/
+│   │   ├── __init__.py
+│   │   ├── loss.py
+│   │   ├── model_utils.py
+│   │   └── optim.py
+│   └── tests/
+│       ├── test_opencl_backend.py
+│       ├── test_simple_model_implementation.py
+│       └── test_tensor.py
+└── .gitignore
 ```
-
-## Training example
-
-The project includes a simple optimization example in `src/tests/test_simple_model_implementation.py`.
-
-```python
-from src.backends import tensor
-from random import randint
-
-x = tensor.Tensor(randint(1, 10))
-desired = x * tensor.Tensor(randint(1, 4)) + tensor.Tensor(randint(1, 2))
-
-weight = tensor.Tensor(randint(1, 10), requires_grad=True)
-bias = tensor.Tensor(randint(1, 10), requires_grad=True)
-
-for _ in range(100):
-    weight.grad = None
-    bias.grad = None
-
-    y = x * weight + bias
-    error = y - desired
-    loss = error ** 2
-
-    loss.backward()
-
-    learning_rate = 0.01
-    weight.data -= learning_rate * weight.grad
-    bias.data -= learning_rate * bias.grad
-```
-
-This demonstrates a minimal gradient-descent workflow using the custom `Tensor` type.
 
 ## Running tests
 
@@ -172,32 +131,37 @@ python src/tests/test_tensor.py
 python src/tests/test_opencl_backend.py
 ```
 
-The OpenCL tests require a working OpenCL installation and compatible device.
+The OpenCL tests depend on an available OpenCL installation and a compatible device.
 
-## Current scope
+## Project status
 
-This library currently provides a compact foundation for experimenting with:
+This library is a small educational framework for building intuition around deep learning internals. It is not intended to replace mature libraries such as PyTorch or TensorFlow.
+
+Current focus areas include:
 
 - tensor arithmetic
-- backpropagation for simple scalar losses
-- NumPy-backed CPU computations
-- PyOpenCL-backed GPU computations
-
-The implementation is intentionally minimal and is well suited for learning how tensor frameworks are structured.
-
-## License
-
-This project does not currently declare a license file. If you plan to distribute or use it publicly, you may want to add one explicitly.
+- basic gradient-based optimization
+- CPU execution with NumPy
+- GPU execution with OpenCL
+- minimal neural network primitives
 
 ## Contributing
 
 Contributions are welcome for:
 
-- broader tensor operations
-- better autodiff coverage
-- more robust device handling
+- additional tensor operations
+- more robust autograd support
+- improved device handling
+- better model utilities
 - performance improvements
-- additional tests
-- documentation and examples
+- tests and documentation
 
-If you are extending the project, keep the code simple and educational so it remains easy to understand for experimentation and learning.
+If you are extending the project, keep the implementation simple and readable so it remains useful as a learning tool.
+
+## License
+
+This project does not currently include a license file. If you plan to distribute or publish it publicly, consider adding an explicit license such as MIT or Apache 2.0.
+
+## Acknowledgements
+
+This project is built for experimentation and education in the areas of tensor math, computational graphs, and device-aware execution.
