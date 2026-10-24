@@ -30,6 +30,14 @@ class Module:
     def forward(self, x: Tensor) -> Tensor:
         raise NotImplementedError("Subclasses must implement the forward method.")
 
+    def zero_grad(self) -> None:
+        """
+        Resets the gradients of all parameters to zero.
+        """
+        for param in self._parameters.values():
+            param.grad = None
+
+
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
 
@@ -60,13 +68,6 @@ class Linear(Module):
             raise ValueError(f"Expected input with {self.in_features} features, got {x.data.shape[-1]}.")
 
         return x * self._parameters["weight"] + self._parameters["bias"]
-
-    def zero_grad(self) -> None:
-        """
-        Resets the gradients of all parameters to zero.
-        """
-        for param in self._parameters.values():
-            param.grad = None
 
 class ReLU(Module):
     """
