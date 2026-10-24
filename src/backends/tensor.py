@@ -310,6 +310,31 @@ class Tensor:
         for tensor in reversed(topo):
             tensor._backward()
 
+    def relu(self):
+        out = Tensor(
+            np.maximum(self.data, 0.0),
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="relu",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            mask = (self.data > 0).astype(np.float32)
+            grad = out.grad * mask
+
+            self.grad = (
+                grad
+                if self.grad is None
+                else self.grad + grad
+            )
+
+        out._backward = _backward
+        return out
+
     # ------------------------------------------------------------------
     # Comparisons and representation
     # ------------------------------------------------------------------

@@ -77,4 +77,4 @@ class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
             raise TypeError("Input must be a Tensor.")
-        return min(x, Tensor(zeros_like(x), device=x.device))
+        return x.relu()
