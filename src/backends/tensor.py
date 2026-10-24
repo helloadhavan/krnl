@@ -335,6 +335,31 @@ class Tensor:
         out._backward = _backward
         return out
 
+
+    def __abs__(self):
+        out = Tensor(
+            np.abs(self.data),
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="abs",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            mask = abs(self.data).astype(np.float32)
+            grad = out.grad * mask
+
+            self.grad = (
+                grad
+                if self.grad is None
+                else self.grad + grad
+            )
+
+        out._backward = _backward
+        return out
     # ------------------------------------------------------------------
     # Comparisons and representation
     # ------------------------------------------------------------------

@@ -78,3 +78,4 @@ class ReLU(Module):
         if not isinstance(x, Tensor):
             raise TypeError("Input must be a Tensor.")
         return x.relu()
+
