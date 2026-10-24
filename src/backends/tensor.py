@@ -141,6 +141,53 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def __sub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+
+        out = Tensor(
+            self.data - other.data,
+            device=self.device,
+            requires_grad=self.requires_grad or other.requires_grad,
+            _children=(self, other),
+            _op="-",
+        )
+
+        def _backward():
+            if self.requires_grad:
+                grad = out.grad
+
+                while grad.ndim > self.data.ndim:
+                    grad = grad.sum(axis=0)
+
+                for axis, size in enumerate(self.data.shape):
+                    if size == 1:
+                        grad = grad.sum(axis=axis, keepdims=True)
+
+                self.grad = (
+                    grad if self.grad is None else self.grad + grad
+                )
+
+            if other.requires_grad:
+                grad = -out.grad
+
+                while grad.ndim > other.data.ndim:
+                    grad = grad.sum(axis=0)
+
+                for axis, size in enumerate(other.data.shape):
+                    if size == 1:
+                        grad = grad.sum(axis=axis, keepdims=True)
+
+                other.grad = (
+                    grad if other.grad is None else other.grad + grad
+                )
+
+        out._backward = _backward
+        return out
+
+    def __rsub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return other - self
+
     def backward(self):
         if self.data.size != 1:
             raise ValueError(
