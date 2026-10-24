@@ -188,6 +188,21 @@ class Tensor:
         other = other if isinstance(other, Tensor) else Tensor(other)
         return other - self
 
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Tensor):
+            return NotImplemented
+        return np.array_equal(self.data, value.data)
+
+    def __gt__(self, value: object, /) -> bool:
+        if not isinstance(value, Tensor):
+            return NotImplemented
+        return np.all(self.data > value.data)
+
+    def __lt__(self, value: object, /) -> bool:
+        if not isinstance(value, Tensor):
+            return NotImplemented
+        return np.all(self.data < value.data)
+
     def backward(self):
         if self.data.size != 1:
             raise ValueError(
