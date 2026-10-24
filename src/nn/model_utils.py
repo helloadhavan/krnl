@@ -41,7 +41,7 @@ class Linear(Module):
 
         # Initialize weights and bias
         weight_data = rand(out_features, in_features) * zeros_like(Tensor(0.01, device=self.device))
-        bias_data = rand(out_features) if bias else None
+        bias_data = rand(out_features) * zeros_like(Tensor(0.01, device=self.device)) if bias else None
 
         self.register_parameter("weight", Parameter(weight_data, device=self.device))
         if bias:
