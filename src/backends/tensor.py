@@ -360,23 +360,134 @@ class Tensor:
             f")"
         )
 
+def _normalize_shape(shape):
+    """Convert an integer or sequence into a tuple shape."""
+    if isinstance(shape, int):
+        return (shape,)
+
+    return tuple(shape)
+
+
+def _create_tensor_from_host(data, device):
+    """
+    Create a Tensor from a NumPy array on the requested device.
+
+    CPU: keeps the data as a NumPy array.
+    GPU: uploads the data through OpenCL.
+    """
+    data = np.asarray(data, dtype=np.float32)
+
+    if device.device == "CPU":
+        return Tensor(
+            data,
+            device=device,
+        )
+
+    if device.device == "GPU":
+        backend = OpenCLBackend.instance()
+        gpu_data = backend.upload(data)
+
+        return Tensor(
+            gpu_data,
+            device=device,
+        )
+
+    raise ValueError(
+        f"Invalid device type: {device.device}"
+    )
+
+
 def ones_like(tensor: Tensor) -> Tensor:
-    """Create a new tensor filled with ones, having the same shape and device as the input tensor."""
-    return Tensor(np.ones_like(tensor.data), device=tensor.device)
+    """
+    Create a tensor filled with ones using the same shape and device.
+    """
+    if not isinstance(tensor, Tensor):
+        raise TypeError("ones_like() expects a Tensor")
+
+    data = np.ones(
+        tensor.data.shape,
+        dtype=np.float32,
+    )
+
+    return _create_tensor_from_host(
+        data,
+        tensor.device,
+    )
+
 
 def zeros_like(tensor: Tensor) -> Tensor:
-    """Create a new tensor filled with zeros, having the same shape and device as the input tensor."""
-    return Tensor(np.zeros_like(tensor.data), device=tensor.device)
+    """
+    Create a tensor filled with zeros using the same shape and device.
+    """
+    if not isinstance(tensor, Tensor):
+        raise TypeError("zeros_like() expects a Tensor")
+
+    data = np.zeros(
+        tensor.data.shape,
+        dtype=np.float32,
+    )
+
+    return _create_tensor_from_host(
+        data,
+        tensor.device,
+    )
+
 
 def full_like(tensor: Tensor, fill_value: float) -> Tensor:
-    """Create a new tensor filled with a specified value, having the same shape and device as the input tensor."""
-    return Tensor(np.full_like(tensor.data, fill_value), device=tensor.device)
+    """
+    Create a tensor filled with fill_value using the same shape and device.
+    """
+    if not isinstance(tensor, Tensor):
+        raise TypeError("full_like() expects a Tensor")
+
+    data = np.full(
+        tensor.data.shape,
+        fill_value,
+        dtype=np.float32,
+    )
+
+    return _create_tensor_from_host(
+        data,
+        tensor.device,
+    )
+
 
 def rand_like(tensor: Tensor) -> Tensor:
-    """Create a new tensor filled with random values, having the same shape and device as the input tensor."""
-    return Tensor(np.random.rand(*tensor.data.shape).astype(np.float32), device=tensor.device)
+    """
+    Create a random tensor using the same shape and device.
+    """
+    if not isinstance(tensor, Tensor):
+        raise TypeError("rand_like() expects a Tensor")
+
+    data = np.random.rand(
+        *tensor.data.shape
+    ).astype(np.float32)
+
+    return _create_tensor_from_host(
+        data,
+        tensor.device,
+    )
+
 
 def rand(shape, device=None) -> Tensor:
-    """Create a new tensor filled with random values, having the specified shape and device."""
-    device = device if device is not None else Device("CPU")
-    return Tensor(np.random.rand(*shape).astype(np.float32), device=device)
+    """
+    Create a random float32 tensor on CPU or GPU.
+
+    Examples:
+        rand(3)
+        rand((2, 3))
+        rand((2, 3), device=Device("GPU"))
+    """
+    if device is None:
+        device = Device("CPU")
+
+    shape = _normalize_shape(shape)
+
+    data = np.random.rand(
+        *shape
+    ).astype(np.float32)
+
+    return _create_tensor_from_host(
+        data,
+        device,
+    )
