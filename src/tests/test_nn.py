@@ -1,6 +1,7 @@
 import random
 import numpy as np
 
+import nn
 from src.backends.tensor import Tensor
 from nn import Linear, ReLU
 
@@ -121,6 +122,7 @@ def main():
         model.parameters(),
         learning_rate=0.01,
     )
+    criterion = nn.MAELoss()
 
     dataset = create_dataset()
 
@@ -141,8 +143,7 @@ def main():
             prediction = model.forward(Tensor(x))
 
             # Mean squared error.
-            error = prediction - target
-            loss = error ** 2
+            loss = criterion(prediction, Tensor(target))
 
             # Backward pass.
             loss.backward()

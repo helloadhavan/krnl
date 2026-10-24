@@ -335,7 +335,6 @@ class Tensor:
         out._backward = _backward
         return out
 
-
     def __abs__(self):
         out = Tensor(
             np.abs(self.data),
@@ -349,8 +348,13 @@ class Tensor:
             if not self.requires_grad:
                 return
 
-            mask = abs(self.data).astype(np.float32)
-            grad = out.grad * mask
+            # d|x|/dx:
+            #   1  when x > 0
+            #  -1  when x < 0
+            #   0  when x = 0
+            sign = np.sign(self.data).astype(np.float32)
+
+            grad = out.grad * sign
 
             self.grad = (
                 grad

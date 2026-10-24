@@ -23,7 +23,7 @@ class MSELoss(BaseCriterion):
             raise ValueError("Predicted and target tensors must have the same shape.")
         return (predicted - target) ** 2
 
-class MAE(BaseCriterion):
+class MAELoss(BaseCriterion):
     """
     Mean Absolute Error Loss.
     Applies the formula: MAE = mean(|predicted - target|)
@@ -34,4 +34,4 @@ class MAE(BaseCriterion):
     def __call__(self, predicted: Tensor, target: Tensor) -> Tensor:
         if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
-        return (predicted - target).abs()
+        return abs(predicted - target)
