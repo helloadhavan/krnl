@@ -27,6 +27,12 @@ class Module:
             raise TypeError("Only instances of Parameter can be registered.")
         self._parameters[name] = parameter
 
+    def forward(self, x: Tensor) -> Tensor:
+        raise NotImplementedError("Subclasses must implement the forward method.")
+
+    def __call__(self, x: Tensor) -> Tensor:
+        return self.forward(x)
+
 class Linear(Module):
     """
     A simple linear layer: y = xW^T + b
