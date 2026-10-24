@@ -67,7 +67,7 @@ The OpenCL backend manages the OpenCL context and command queue. Arrays are uplo
 
 ```python
 import numpy as np
-from backends.GPU_processer import OpenCLBackend
+from src.backends.GPU_processer import OpenCLBackend
 
 backend = OpenCLBackend()
 

@@ -1,4 +1,4 @@
-from backends.GPU_processer import OpenCLBackend
+from src.backends.GPU_processer import OpenCLBackend
 import numpy as np
 
 backend = OpenCLBackend()

@@ -2,8 +2,27 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import Program
-from backends.kernels import MATMUL_KERNEL
+from src.backends.kernels import MATMUL_KERNEL
 
+def get_gpu_info():
+    platforms = cl.get_platforms()
+    gpu_info = []
+
+    for platform in platforms:
+        devices = platform.get_devices(device_type=cl.device_type.GPU)
+        for device in devices:
+            info = {
+                "platform": platform.name,
+                "device": device.name,
+                "max_compute_units": device.max_compute_units,
+                "max_work_group_size": device.max_work_group_size,
+                "global_mem_size": device.global_mem_size,
+                "local_mem_size": device.local_mem_size,
+                "max_clock_frequency": device.max_clock_frequency,
+            }
+            gpu_info.append(info)
+
+    return gpu_info
 
 class OpenCLBackend:
     _instance = None
