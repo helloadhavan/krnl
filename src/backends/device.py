@@ -1,7 +1,7 @@
 import platform
 import psutil
 from typing import Literal
-from GPU_processer import get_gpu_info
+from src.backends.GPU_processer import get_gpu_info
 
 
 
@@ -15,7 +15,7 @@ info = {
     "max_compute_units": psutil.cpu_count(logical=False), # Physical CPU cores
     "max_work_group_size": psutil.cpu_count(logical=True),# Total logical threads
     "global_mem_size": virtual_mem.total,                # Total system RAM (bytes)
-    "local_mem_size": getattr(psutil, "cpu_stats", None)().cache_misses if hasattr(psutil, "cpu_stats") else None, # Placeholder (psutil cannot read CPU L1/L2 cache sizes directly)
+    "local_mem_size": None, # Placeholder (psutil cannot read CPU L1/L2 cache sizes directly)
     "max_clock_frequency": max_clock                     # Max clock speed in MHz
 }
 

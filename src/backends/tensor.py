@@ -1,10 +1,31 @@
-from src.backends.GPU_processer import OpenCLBackend
+from __future__ import annotations
+
+from src.backends.GPU_processer import OpenCLBackend, cl_array
+from src.backends.device import Device
 import numpy as np
 
 
+
 class Tensor:
-    def __init__(self, data, requires_grad=False, _children=(), _op=""):
-        self.data = np.asarray(data, dtype=np.float32)
+    def __init__(self, data: Tensor | list | np.ndarray | cl_array, device: Device = Device("CPU"), requires_grad=False, _children=(), _op=""):
+        if device == "GPU":
+            self.backend = OpenCLBackend.instance()
+
+        if isinstance(data, Tensor):
+            self.data = data.data
+        else:
+            if device.device == "CPU":
+                self.data = np.array(data, dtype=np.float32)
+            elif device.device == "GPU":
+                if isinstance(data, cl_array.Array):
+                    self.data = data
+                else:
+                    self.data = self.backend.upload(np.array(data, dtype=np.float32))
+            else:
+                raise ValueError(f"Invalid device type: {device.device}")
+
+
+        self.device = device
         self.requires_grad = requires_grad
         self.grad = None
 
@@ -17,6 +38,7 @@ class Tensor:
 
         out = Tensor(
             self.data + other.data,
+            device=self.device,
             requires_grad=self.requires_grad or other.requires_grad,
             _children=(self, other),
             _op="+",
@@ -61,6 +83,7 @@ class Tensor:
 
         out = Tensor(
             self.data * other.data,
+            device=self.device,
             requires_grad=self.requires_grad or other.requires_grad,
             _children=(self, other),
             _op="*",
@@ -102,6 +125,7 @@ class Tensor:
     def __pow__(self, power):
         out = Tensor(
             self.data ** power,
+            device=self.device,
             requires_grad=self.requires_grad,
             _children=(self,),
             _op=f"**{power}",
