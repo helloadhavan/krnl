@@ -1,4 +1,4 @@
-from backends.tensor import Tensor
+from backends.tensor import Tensor, rand, zeros_like
 from backends.device import Device
 
 class Parameter(Tensor):
@@ -32,18 +32,20 @@ class Linear(Module):
     A simple linear layer: y = xW^T + b
     """
 
-    def __init__(self, in_features: int, out_features: int, device=None):
+    def __init__(self, in_features: int, out_features: int, bias = False, device=None):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.device = device if device is not None else Device("CPU")
+        self.bias = bias
 
         # Initialize weights and bias
-        weight_data = np.random.randn(out_features, in_features) * 0.01
-        bias_data = np.zeros(out_features)
+        weight_data = rand(out_features, in_features) * 0.01
+        bias_data = rand(out_features) if bias else None
 
         self.register_parameter("weight", Parameter(weight_data, device=self.device))
-        self.register_parameter("bias", Parameter(bias_data, device=self.device))
+        if bias:
+            self.register_parameter("bias", Parameter(bias_data, device=self.device))
 
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
@@ -53,4 +55,19 @@ class Linear(Module):
 
         return x * self._parameters["weight"] + self._parameters["bias"]
 
+    def zero_grad(self) -> None:
+        """
+        Resets the gradients of all parameters to zero.
+        """
+        for param in self._parameters.values():
+            param.grad = None
 
+class ReLU(Module):
+    """
+    A simple ReLU activation layer.
+    """
+
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        return min(x, Tensor(zeros_like(x), device=x.device))
