@@ -10,6 +10,9 @@ print(f"Initial weight: {weight.data}, Initial bias: {bias.data}")
 
 
 for i in range(100):
+    # Reset gradients to zero before each backward pass
+    weight.grad = None
+    bias.grad = None
     # forward pass
     y = dx * weight + bias
     error = y - dy
