@@ -214,3 +214,24 @@ class Tensor:
 
     def __repr__(self):
         return f"Tensor(data={self.data}, grad={self.grad})"
+
+def ones_like(tensor: Tensor) -> Tensor:
+    """Create a new tensor filled with ones, having the same shape and device as the input tensor."""
+    return Tensor(np.ones_like(tensor.data), device=tensor.device)
+
+def zeros_like(tensor: Tensor) -> Tensor:
+    """Create a new tensor filled with zeros, having the same shape and device as the input tensor."""
+    return Tensor(np.zeros_like(tensor.data), device=tensor.device)
+
+def full_like(tensor: Tensor, fill_value: float) -> Tensor:
+    """Create a new tensor filled with a specified value, having the same shape and device as the input tensor."""
+    return Tensor(np.full_like(tensor.data, fill_value), device=tensor.device)
+
+def rand_like(tensor: Tensor) -> Tensor:
+    """Create a new tensor filled with random values, having the same shape and device as the input tensor."""
+    return Tensor(np.random.rand(*tensor.data.shape).astype(np.float32), device=tensor.device)
+
+def rand(shape, device=None) -> Tensor:
+    """Create a new tensor filled with random values, having the specified shape and device."""
+    device = device if device is not None else Device("CPU")
+    return Tensor(np.random.rand(*shape).astype(np.float32), device=device)

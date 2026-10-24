@@ -51,6 +51,6 @@ class Linear(Module):
         if x.data.shape[-1] != self.in_features:
             raise ValueError(f"Expected input with {self.in_features} features, got {x.data.shape[-1]}.")
 
-        return x @ self._parameters["weight"] + self._parameters["bias"]
+        return x * self._parameters["weight"] + self._parameters["bias"]
 
 

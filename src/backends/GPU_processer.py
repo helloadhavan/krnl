@@ -66,6 +66,18 @@ class OpenCLBackend:
 
         return result
 
+    def subtract(self, a: cl_array.Array, b: cl_array.Array):
+        if a.shape != b.shape:
+            raise ValueError("Tensor shapes must match")
+        if a.dtype != b.dtype:
+            raise TypeError("Tensor dtypes must match")
+        if a.dtype != np.dtype(np.float32):
+            raise TypeError("Initial OpenCL backend supports float32 only")
+
+        result = a - b
+
+        return result
+
     def matmul(self, a: cl_array.Array, b: cl_array.Array):
         if len(a.shape) != 2 or len(b.shape) != 2:
             raise ValueError("matmul requires two 2D tensors")
