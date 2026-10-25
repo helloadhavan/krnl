@@ -35,3 +35,13 @@ class MAELoss(BaseCriterion):
         if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
         return abs(predicted - target)
+
+class HuberLoss(BaseCriterion):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, predicted: Tensor, target: Tensor, mae_toggle_error = 1) -> Tensor:
+        if predicted.data.shape != target.data.shape:
+            raise ValueError("Predicted and target tensors must have the same shape.")
+        error = predicted - target
+        return abs(error) if mae_toggle_error > error else error ** 2
