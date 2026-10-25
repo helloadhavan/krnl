@@ -1,7 +1,7 @@
 import numpy as np
 
 import nn as nn
-from backends.backends.tensor import Tensor
+from src.krnl.backends.tensor import Tensor
 
 
 def main():

@@ -1,6 +1,6 @@
 # test_opencl_backend.py
 
-from backends.backends.tensor import Tensor
+from src.krnl.backends.tensor import Tensor
 
 
 def test_tensor_backward_for_addition():
