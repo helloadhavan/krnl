@@ -38,8 +38,8 @@ To use the OpenCL backend, make sure your system has a compatible OpenCL runtime
 ```python
 import numpy as np
 
-import nn as nn
-from src.krnl.backends.tensor import Tensor
+from krnl import nn
+from krnl import Tensor
 
 
 def main():
