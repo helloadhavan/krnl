@@ -2,7 +2,9 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import Program
-from backends.backends.kernels import MATMUL_KERNEL, SIGMOID_KERNEL
+
+from .kernels import MATMUL_KERNEL, SIGMOID_KERNEL
+
 
 def get_gpu_info():
     platforms = cl.get_platforms()
@@ -23,6 +25,7 @@ def get_gpu_info():
             gpu_info.append(info)
 
     return gpu_info
+
 
 class OpenCLBackend:
     _instance = None
@@ -51,9 +54,7 @@ class OpenCLBackend:
         if a.dtype != np.dtype(np.float32):
             raise TypeError("Initial OpenCL backend supports float32 only")
 
-        result = a + b
-
-        return result
+        return a + b
 
     def __mul__(self, a: cl_array.Array, b: cl_array.Array):
         if a.shape != b.shape:
@@ -63,9 +64,7 @@ class OpenCLBackend:
         if a.dtype != np.dtype(np.float32):
             raise TypeError("Initial OpenCL backend supports float32 only")
 
-        result = a * b
-
-        return result
+        return a * b
 
     def __sub__(self, a: cl_array.Array, b: cl_array.Array):
         if a.shape != b.shape:
@@ -75,9 +74,7 @@ class OpenCLBackend:
         if a.dtype != np.dtype(np.float32):
             raise TypeError("Initial OpenCL backend supports float32 only")
 
-        result = a - b
-
-        return result
+        return a - b
 
     def __matmul__(self, a: cl_array.Array, b: cl_array.Array):
         if len(a.shape) != 2 or len(b.shape) != 2:
@@ -87,18 +84,12 @@ class OpenCLBackend:
         K2, N = b.shape
 
         if K != K2:
-            raise ValueError(
-                f"Incompatible shapes for matmul: {a.shape} and {b.shape}"
-            )
+            raise ValueError(f"Incompatible shapes for matmul: {a.shape} and {b.shape}")
 
         if a.dtype != np.dtype(np.float32) or b.dtype != np.dtype(np.float32):
             raise TypeError("matmul supports float32 only")
 
-        out = cl_array.empty(
-            self.queue,
-            (M, N),
-            dtype=np.float32
-        )
+        out = cl_array.empty(self.queue, (M, N), dtype=np.float32)
 
         self.matmul_program.matmul_f32(
             self.queue,
@@ -109,28 +100,19 @@ class OpenCLBackend:
             out.data,
             np.int32(M),
             np.int32(K),
-            np.int32(N)
+            np.int32(N),
         )
 
+        return out
+
     def sigmoid(self, input_array: cl_array.Array):
-        """
-        Apply sigmoid element-wise to a GPU float32 array.
-
-        sigmoid(x) = 1 / (1 + exp(-x))
-        """
-
         if not isinstance(input_array, cl_array.Array):
-            raise TypeError(
-                "sigmoid expects a pyopencl.array.Array"
-            )
+            raise TypeError("sigmoid expects a pyopencl.array.Array")
 
         if input_array.dtype != np.dtype(np.float32):
-            raise TypeError(
-                "sigmoid supports float32 arrays only"
-            )
+            raise TypeError("sigmoid supports float32 arrays only")
 
         output = cl_array.empty_like(input_array)
-
         count = np.uint32(input_array.size)
 
         self.sigmoid_program.sigmoid_f32(
@@ -143,5 +125,3 @@ class OpenCLBackend:
         )
 
         return output
-
-

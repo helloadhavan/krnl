@@ -1,20 +1,15 @@
-from backends.tensor import Tensor
+from ..backends.tensor import Tensor
+
 
 class BaseCriterion:
-    """
-    Base class for all loss functions.
-    """
     def __init__(self):
         pass
 
     def __call__(self, predicted: Tensor, target: Tensor) -> Tensor:
         raise NotImplementedError("Subclasses must implement the __call__ method.")
 
+
 class MSELoss(BaseCriterion):
-    """
-    Mean Squared Error Loss.
-    Applies the formula: MSE = mean((predicted - target)^2)
-    """
     def __init__(self):
         super().__init__()
 
@@ -23,11 +18,8 @@ class MSELoss(BaseCriterion):
             raise ValueError("Predicted and target tensors must have the same shape.")
         return (predicted - target) ** 2
 
+
 class MAELoss(BaseCriterion):
-    """
-    Mean Absolute Error Loss.
-    Applies the formula: MAE = mean(|predicted - target|)
-    """
     def __init__(self):
         super().__init__()
 
@@ -36,12 +28,16 @@ class MAELoss(BaseCriterion):
             raise ValueError("Predicted and target tensors must have the same shape.")
         return abs(predicted - target)
 
+
 class HuberLoss(BaseCriterion):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, predicted: Tensor, target: Tensor, mae_toggle_error = 1) -> Tensor:
+    def __call__(self, predicted: Tensor, target: Tensor, mae_toggle_error=1) -> Tensor:
         if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
         error = predicted - target
         return abs(error) if mae_toggle_error > error else error ** 2
+
+
+__all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss"]

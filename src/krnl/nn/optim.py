@@ -2,120 +2,55 @@ from __future__ import annotations
 
 import numpy as np
 
-from nn.model_utils import Parameter
+from .model_utils import Parameter
 
 
 class Optimizer:
-    """
-    Base class for optimizers.
-    """
-
     def __init__(self, parameters, defaults=None):
         self.param = list(parameters)
         self.state = defaults if defaults is not None else {}
 
     def zero_grad(self):
-        """
-        Clear gradients before a new backward pass.
-        """
         for parameter in self.param:
             parameter.grad = None
 
     def step(self):
-        raise NotImplementedError(
-            "Optimizer subclasses must implement step()."
-        )
+        raise NotImplementedError("Optimizer subclasses must implement step().")
 
 
 class SGD(Optimizer):
-    """
-    Stochastic Gradient Descent.
-
-        parameter = parameter - learning_rate * gradient
-    """
-
     def __init__(self, parameters, learning_rate=0.01):
         self.learning_rate = learning_rate
-
-        defaults = {
-            "lr": learning_rate,
-        }
-
-        super().__init__(
-            parameters,
-            defaults,
-        )
+        defaults = {"lr": learning_rate}
+        super().__init__(parameters, defaults)
 
     def step(self):
-        """
-        Update every parameter with its gradient.
-        """
         for parameter in self.param:
             if parameter.grad is None:
                 continue
-
-            parameter.data -= (
-                self.learning_rate * parameter.grad
-            )
+            parameter.data -= self.learning_rate * parameter.grad
 
 
 class Adam(Optimizer):
-    """
-    Adam optimizer.
-
-    Adam maintains:
-
-        m_t = beta1 * m_(t-1) + (1 - beta1) * gradient
-        v_t = beta2 * v_(t-1) + (1 - beta2) * gradient²
-
-    Then applies bias correction before updating parameters.
-    """
-
-    def __init__(
-        self,
-        parameters,
-        learning_rate=0.001,
-        betas=(0.9, 0.999),
-        epsilon=1e-8,
-    ):
+    def __init__(self, parameters, learning_rate=0.001, betas=(0.9, 0.999), epsilon=1e-8):
         parameters = list(parameters)
 
         if not 0.0 <= betas[0] < 1.0:
-            raise ValueError(
-                "beta1 must be between 0 and 1."
-            )
-
+            raise ValueError("beta1 must be between 0 and 1.")
         if not 0.0 <= betas[1] < 1.0:
-            raise ValueError(
-                "beta2 must be between 0 and 1."
-            )
-
+            raise ValueError("beta2 must be between 0 and 1.")
         if learning_rate <= 0:
-            raise ValueError(
-                "learning_rate must be greater than zero."
-            )
-
+            raise ValueError("learning_rate must be greater than zero.")
         if epsilon <= 0:
-            raise ValueError(
-                "epsilon must be greater than zero."
-            )
+            raise ValueError("epsilon must be greater than zero.")
 
         self.learning_rate = learning_rate
         self.beta1, self.beta2 = betas
         self.epsilon = epsilon
-
         self.step_count = 0
-
         self.state = {}
 
-        super().__init__(
-            parameters,
-            {
-                "lr": learning_rate,
-                "betas": betas,
-                "eps": epsilon,
-            },
-        )
+        super().__init__(parameters, {"lr": learning_rate, "betas": betas, "eps": epsilon})
 
         for parameter in parameters:
             self.state[id(parameter)] = {
@@ -125,43 +60,19 @@ class Adam(Optimizer):
 
     @staticmethod
     def _zeros_like_data(parameter):
-        """
-        Create a zero array with the same shape, dtype, and device
-        as parameter.data.
-
-        This supports both NumPy CPU arrays and PyOpenCL arrays.
-        """
         data = parameter.data
-
         if hasattr(data, "queue"):
             import pyopencl.array as cl_array
-
-            return cl_array.zeros(
-                data.queue,
-                data.shape,
-                dtype=np.float32,
-            )
-
-        return np.zeros_like(
-            data,
-            dtype=np.float32,
-        )
+            return cl_array.zeros(data.queue, data.shape, dtype=np.float32)
+        return np.zeros_like(data, dtype=np.float32)
 
     def step(self):
-        """
-        Apply one Adam update to every parameter.
-        """
         self.step_count += 1
-
-        beta1 = self.beta1
-        beta2 = self.beta2
-
         for parameter in self.param:
             if parameter.grad is None:
                 continue
 
             parameter_id = id(parameter)
-
             if parameter_id not in self.state:
                 self.state[parameter_id] = {
                     "m": self._zeros_like_data(parameter),
@@ -169,46 +80,22 @@ class Adam(Optimizer):
                 }
 
             state = self.state[parameter_id]
-
             gradient = parameter.grad
             m = state["m"]
             v = state["v"]
 
-            m *= beta1
-            m += (1.0 - beta1) * gradient
+            m *= self.beta1
+            m += (1.0 - self.beta1) * gradient
+            v *= self.beta2
+            v += (1.0 - self.beta2) * (gradient * gradient)
 
-            v *= beta2
-            v += (1.0 - beta2) * (gradient * gradient)
-
-            m_hat = m / (
-                1.0 - beta1 ** self.step_count
-            )
-
-            v_hat = v / (
-                1.0 - beta2 ** self.step_count
-            )
-
-            parameter.data -= (
-                self.learning_rate
-                * m_hat
-                / (np.sqrt(v_hat) + self.epsilon)
-            )
+            m_hat = m / (1.0 - self.beta1 ** self.step_count)
+            v_hat = v / (1.0 - self.beta2 ** self.step_count)
+            parameter.data -= self.learning_rate * (m_hat / (np.sqrt(v_hat) + self.epsilon))
 
 
 class Muon(Optimizer):
-    """
-    Muon optimizer.
-    A simple Muon-style update: momentum + orthogonalized update direction.
-    """
-
-    def __init__(
-        self,
-        parameters,
-        learning_rate=0.02,
-        momentum=0.9,
-        weight_decay=0.0,
-        eps=1e-8,
-    ):
+    def __init__(self, parameters, learning_rate=0.02, momentum=0.9, weight_decay=0.0, eps=1e-8):
         parameters = list(parameters)
 
         if learning_rate <= 0:
@@ -223,34 +110,17 @@ class Muon(Optimizer):
         self.weight_decay = weight_decay
         self.eps = eps
 
-        super().__init__(
-            parameters,
-            {
-                "lr": learning_rate,
-                "momentum": momentum,
-                "weight_decay": weight_decay,
-                "eps": eps,
-            },
-        )
+        super().__init__(parameters, {"lr": learning_rate, "momentum": momentum, "weight_decay": weight_decay, "eps": eps})
 
         for parameter in parameters:
-            self.state[id(parameter)] = {
-                "momentum": self._zeros_like_data(parameter),
-            }
+            self.state[id(parameter)] = {"momentum": self._zeros_like_data(parameter)}
 
     @staticmethod
     def _zeros_like_data(parameter):
         data = parameter.data
-
         if hasattr(data, "queue"):
             import pyopencl.array as cl_array
-
-            return cl_array.zeros(
-                data.queue,
-                data.shape,
-                dtype=np.float32,
-            )
-
+            return cl_array.zeros(data.queue, data.shape, dtype=np.float32)
         return np.zeros_like(data, dtype=np.float32)
 
     @staticmethod
@@ -263,17 +133,12 @@ class Muon(Optimizer):
     def _to_parameter_dtype(array, parameter):
         if hasattr(parameter.data, "queue"):
             import pyopencl.array as cl_array
-
-            return cl_array.to_device(
-                parameter.data.queue,
-                np.asarray(array, dtype=np.float32),
-            )
+            return cl_array.to_device(parameter.data.queue, np.asarray(array, dtype=np.float32))
         return np.asarray(array, dtype=np.float32)
 
     @staticmethod
     def _orthogonalize(matrix):
         matrix = np.asarray(matrix, dtype=np.float32)
-
         if matrix.ndim == 0:
             return matrix
         if matrix.ndim == 1:
@@ -281,7 +146,6 @@ class Muon(Optimizer):
             if norm <= 0:
                 return matrix
             return matrix / norm
-
         if matrix.ndim == 2:
             u, _, vh = np.linalg.svd(matrix, full_matrices=False)
             return u @ vh
@@ -291,93 +155,39 @@ class Muon(Optimizer):
         return (u @ vh).reshape(matrix.shape)
 
     def step(self):
-        """
-        Perform one Muon optimization step.
-
-        The momentum and orthogonalization calculations are performed
-        using NumPy because this implementation uses np.linalg.svd().
-        The final parameter update is copied back to the parameter's
-        device.
-        """
-
         for parameter in self.param:
             if parameter.grad is None:
                 continue
 
             parameter_id = id(parameter)
-
             if parameter_id not in self.state:
-                self.state[parameter_id] = {
-                    "momentum": np.zeros_like(
-                        self._to_numpy(parameter.data),
-                        dtype=np.float32,
-                    )
-                }
+                self.state[parameter_id] = {"momentum": np.zeros_like(self._to_numpy(parameter.data), dtype=np.float32)}
 
             state = self.state[parameter_id]
-
-            # Convert gradient, parameter data, and momentum to NumPy.
             grad = self._to_numpy(parameter.grad)
             parameter_data = self._to_numpy(parameter.data)
             momentum = self._to_numpy(state["momentum"])
 
-            # Optional L2 weight decay.
             if self.weight_decay != 0.0:
-                grad = grad + (
-                        self.weight_decay * parameter_data
-                )
+                grad = grad + (self.weight_decay * parameter_data)
 
-            # Momentum update.
-            momentum = (
-                    self.momentum * momentum
-                    + (1.0 - self.momentum) * grad
-            )
-
-            # Muon-style orthogonalization.
+            momentum = self.momentum * momentum + (1.0 - self.momentum) * grad
             update = self._orthogonalize(momentum)
-
-            # Normalize the update.
             update_norm = np.linalg.norm(update)
-
             if update_norm > self.eps:
-                update = update / (
-                        update_norm + self.eps
-                )
+                update = update / (update_norm + self.eps)
 
-            # Keep optimizer state as NumPy data.
             state["momentum"] = momentum
 
-            # Apply update on the parameter's device.
             if hasattr(parameter.data, "queue"):
-                gpu_update = self._to_parameter_dtype(
-                    update,
-                    parameter,
-                )
-
-                parameter.data -= (
-                        self.learning_rate * gpu_update
-                )
+                gpu_update = self._to_parameter_dtype(update, parameter)
+                parameter.data -= self.learning_rate * gpu_update
             else:
-                parameter.data -= (
-                        self.learning_rate * update
-                )
+                parameter.data -= self.learning_rate * update
 
 
 class MuonAdam(Optimizer):
-    """
-    Muon with Adam-style auxiliary statistics.
-    This keeps Adam-like first/second moment estimates, then applies the
-    Muon orthogonalization step on the adaptive update direction.
-    """
-
-    def __init__(
-        self,
-        parameters,
-        learning_rate=0.02,
-        betas=(0.9, 0.999),
-        epsilon=1e-8,
-        weight_decay=0.0,
-    ):
+    def __init__(self, parameters, learning_rate=0.02, betas=(0.9, 0.999), epsilon=1e-8, weight_decay=0.0):
         parameters = list(parameters)
 
         if not 0.0 <= betas[0] < 1.0:
@@ -395,35 +205,17 @@ class MuonAdam(Optimizer):
         self.weight_decay = weight_decay
         self.step_count = 0
 
-        super().__init__(
-            parameters,
-            {
-                "lr": learning_rate,
-                "betas": betas,
-                "eps": epsilon,
-                "weight_decay": weight_decay,
-            },
-        )
+        super().__init__(parameters, {"lr": learning_rate, "betas": betas, "eps": epsilon, "weight_decay": weight_decay})
 
         for parameter in parameters:
-            self.state[id(parameter)] = {
-                "m": self._zeros_like_data(parameter),
-                "v": self._zeros_like_data(parameter),
-            }
+            self.state[id(parameter)] = {"m": self._zeros_like_data(parameter), "v": self._zeros_like_data(parameter)}
 
     @staticmethod
     def _zeros_like_data(parameter: Parameter):
         data = parameter.data
-
         if hasattr(data, "queue"):
             import pyopencl.array as cl_array
-
-            return cl_array.zeros(
-                data.queue,
-                data.shape,
-                dtype=np.float32,
-            )
-
+            return cl_array.zeros(data.queue, data.shape, dtype=np.float32)
         return np.zeros_like(data, dtype=np.float32)
 
     @staticmethod
@@ -436,17 +228,12 @@ class MuonAdam(Optimizer):
     def _to_parameter_dtype(array, parameter):
         if hasattr(parameter.data, "queue"):
             import pyopencl.array as cl_array
-
-            return cl_array.to_device(
-                parameter.data.queue,
-                np.asarray(array, dtype=np.float32),
-            )
+            return cl_array.to_device(parameter.data.queue, np.asarray(array, dtype=np.float32))
         return np.asarray(array, dtype=np.float32)
 
     @staticmethod
     def _orthogonalize(matrix):
         matrix = np.asarray(matrix, dtype=np.float32)
-
         if matrix.ndim == 0:
             return matrix
         if matrix.ndim == 1:
@@ -454,7 +241,6 @@ class MuonAdam(Optimizer):
             if norm <= 0:
                 return matrix
             return matrix / norm
-
         if matrix.ndim == 2:
             u, _, vh = np.linalg.svd(matrix, full_matrices=False)
             return u @ vh
@@ -462,7 +248,6 @@ class MuonAdam(Optimizer):
         flat = matrix.reshape(matrix.shape[0], -1)
         u, _, vh = np.linalg.svd(flat, full_matrices=False)
         return (u @ vh).reshape(matrix.shape)
-
 
     def step(self):
         self.step_count += 1
@@ -472,84 +257,38 @@ class MuonAdam(Optimizer):
                 continue
 
             parameter_id = id(parameter)
-
             if parameter_id not in self.state:
-                self.state[parameter_id] = {
-                    "m": self._zeros_like_data(parameter),
-                    "v": self._zeros_like_data(parameter),
-                }
+                self.state[parameter_id] = {"m": self._zeros_like_data(parameter), "v": self._zeros_like_data(parameter)}
 
             state = self.state[parameter_id]
-
-            # Convert values to NumPy before using NumPy operations.
             grad = self._to_numpy(parameter.grad)
             parameter_data = self._to_numpy(parameter.data)
-
-            # Ensure the state uses Adam's expected keys.
             m = self._to_numpy(state["m"])
             v = self._to_numpy(state["v"])
 
             if self.weight_decay != 0.0:
-                grad = grad + (
-                        self.weight_decay * parameter_data
-                )
+                grad = grad + (self.weight_decay * parameter_data)
 
-            # Update first moment.
-            m = (
-                    self.beta1 * m
-                    + (1.0 - self.beta1) * grad
-            )
-
-            # Update second moment.
-            v = (
-                    self.beta2 * v
-                    + (1.0 - self.beta2) * (grad * grad)
-            )
-
-            # Bias correction.
-            m_hat = m / (
-                    1.0 - self.beta1 ** self.step_count
-            )
-
-            v_hat = v / (
-                    1.0 - self.beta2 ** self.step_count
-            )
-
-            # Adam adaptive update.
-            update = m_hat / (
-                    np.sqrt(v_hat) + self.epsilon
-            )
-
-            # Muon orthogonalization.
+            m = self.beta1 * m + (1.0 - self.beta1) * grad
+            v = self.beta2 * v + (1.0 - self.beta2) * (grad * grad)
+            m_hat = m / (1.0 - self.beta1 ** self.step_count)
+            v_hat = v / (1.0 - self.beta2 ** self.step_count)
+            update = m_hat / (np.sqrt(v_hat) + self.epsilon)
             update = self._orthogonalize(update)
-
-            # Normalize the update.
             update_norm = np.linalg.norm(update)
-
             if update_norm > self.epsilon:
-                update = update / (
-                        update_norm + self.epsilon
-                )
+                update = update / (update_norm + self.epsilon)
 
-            # Keep optimizer state on the CPU because the current
-            # orthogonalization uses NumPy/SVD.
             state["m"] = m
             state["v"] = v
 
-            # Apply the final update to CPU or GPU parameters.
             if hasattr(parameter.data, "queue"):
-                gpu_update = self._to_parameter_dtype(
-                    update,
-                    parameter,
-                )
-
-                parameter.data -= (
-                        self.learning_rate * gpu_update
-                )
+                gpu_update = self._to_parameter_dtype(update, parameter)
+                parameter.data -= self.learning_rate * gpu_update
             else:
-                parameter.data -= (
-                        self.learning_rate * update
-                )
+                parameter.data -= self.learning_rate * update
+
+
 MuonWithAdamAux = MuonAdam
 MuonWithAdamAuxiliary = MuonAdam
 MuonAdamAux = MuonAdam

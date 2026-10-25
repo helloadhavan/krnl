@@ -41,6 +41,4 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+packages = ["krnl", "krnl.backends", "krnl.nn"]

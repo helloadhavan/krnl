@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pyopencl.array as cl_array
 
-from backends.backends.GPU_processer import OpenCLBackend
-from backends.backends.device import Device
+from .GPU_processer import OpenCLBackend
+from .device import Device
 
 
 class Tensor:
@@ -40,46 +40,25 @@ class Tensor:
                 self.data = self.backend.upload(data)
 
         else:
-            raise ValueError(
-                f"Invalid device type: {self.device.device}"
-            )
+            raise ValueError(f"Invalid device type: {self.device.device}")
 
         self._prev = set(_children)
         self._op = _op
         self._backward = lambda: None
 
     def __eq__(self, other):
-        """
-        Tensors are graph nodes, so compare them by identity.
-        """
         return self is other
 
     def __hash__(self):
-        """
-        Required because Tensor objects are stored in sets.
-        """
         return id(self)
 
-    # ------------------------------------------------------------------
-    # Utility methods
-    # ------------------------------------------------------------------
-
     def _ensure_tensor(self, value):
-        """
-        Convert numbers and arrays to tensors on this tensor's device.
-        """
         if isinstance(value, Tensor):
             if value.device.device != self.device.device:
-                raise ValueError(
-                    "Both tensors must use the same device"
-                )
+                raise ValueError("Both tensors must use the same device")
             return value
 
-        return Tensor(
-            value,
-            device=self.device,
-            requires_grad=False,
-        )
+        return Tensor(value, device=self.device, requires_grad=False)
 
     @staticmethod
     def _accumulate_grad(tensor, grad):
@@ -90,27 +69,17 @@ class Tensor:
 
     @staticmethod
     def _reduce_broadcasted_gradient(grad, target_shape):
-        """
-        Reduce a broadcasted gradient to the original tensor shape.
-        """
         while grad.ndim > len(target_shape):
             grad = grad.sum(axis=0)
 
         for axis, size in enumerate(target_shape):
             if size == 1:
-                grad = grad.sum(
-                    axis=axis,
-                    keepdims=True,
-                )
+                grad = grad.sum(axis=axis, keepdims=True)
 
         return grad
 
     def zero_grad(self):
         self.grad = None
-
-    # ------------------------------------------------------------------
-    # Addition
-    # ------------------------------------------------------------------
 
     def __add__(self, other):
         other = self._ensure_tensor(other)
@@ -118,27 +87,18 @@ class Tensor:
         out = Tensor(
             self.data + other.data,
             device=self.device,
-            requires_grad=(
-                self.requires_grad
-                or other.requires_grad
-            ),
+            requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="+",
         )
 
         def _backward():
             if self.requires_grad:
-                grad = self._reduce_broadcasted_gradient(
-                    out.grad,
-                    self.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(out.grad, self.data.shape)
                 self._accumulate_grad(self, grad)
 
             if other.requires_grad:
-                grad = self._reduce_broadcasted_gradient(
-                    out.grad,
-                    other.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(out.grad, other.data.shape)
                 self._accumulate_grad(other, grad)
 
         out._backward = _backward
@@ -147,39 +107,25 @@ class Tensor:
     def __radd__(self, other):
         return self + other
 
-    # ------------------------------------------------------------------
-    # Subtraction
-    # ------------------------------------------------------------------
-
     def __sub__(self, other):
         other = self._ensure_tensor(other)
 
         out = Tensor(
             self.data - other.data,
             device=self.device,
-            requires_grad=(
-                self.requires_grad
-                or other.requires_grad
-            ),
+            requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="-",
         )
 
         def _backward():
             if self.requires_grad:
-                grad = self._reduce_broadcasted_gradient(
-                    out.grad,
-                    self.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(out.grad, self.data.shape)
                 self._accumulate_grad(self, grad)
 
             if other.requires_grad:
                 grad = -out.grad
-
-                grad = self._reduce_broadcasted_gradient(
-                    grad,
-                    other.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
                 self._accumulate_grad(other, grad)
 
         out._backward = _backward
@@ -189,20 +135,13 @@ class Tensor:
         other = self._ensure_tensor(other)
         return other - self
 
-    # ------------------------------------------------------------------
-    # Multiplication
-    # ------------------------------------------------------------------
-
     def __mul__(self, other):
         other = self._ensure_tensor(other)
 
         out = Tensor(
             self.data * other.data,
             device=self.device,
-            requires_grad=(
-                self.requires_grad
-                or other.requires_grad
-            ),
+            requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="*",
         )
@@ -210,20 +149,12 @@ class Tensor:
         def _backward():
             if self.requires_grad:
                 grad = out.grad * other.data
-
-                grad = self._reduce_broadcasted_gradient(
-                    grad,
-                    self.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
                 self._accumulate_grad(self, grad)
 
             if other.requires_grad:
                 grad = out.grad * self.data
-
-                grad = self._reduce_broadcasted_gradient(
-                    grad,
-                    other.data.shape,
-                )
+                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
                 self._accumulate_grad(other, grad)
 
         out._backward = _backward
@@ -232,15 +163,9 @@ class Tensor:
     def __rmul__(self, other):
         return self * other
 
-    # ------------------------------------------------------------------
-    # Power
-    # ------------------------------------------------------------------
-
     def __pow__(self, power):
         if not isinstance(power, (int, float)):
-            raise TypeError(
-                "power must be an int or float"
-            )
+            raise TypeError("power must be an int or float")
 
         out = Tensor(
             self.data ** power,
@@ -252,31 +177,15 @@ class Tensor:
 
         def _backward():
             if self.requires_grad:
-                grad = (
-                    out.grad
-                    * power
-                    * self.data ** (power - 1)
-                )
-
+                grad = out.grad * power * self.data ** (power - 1)
                 self._accumulate_grad(self, grad)
 
         out._backward = _backward
         return out
 
-    # ------------------------------------------------------------------
-    # Backward pass
-    # ------------------------------------------------------------------
-
     def backward(self):
-        """
-        Run reverse-mode automatic differentiation.
-
-        The output must be scalar.
-        """
         if self.data.size != 1:
-            raise ValueError(
-                "backward() requires a scalar output or loss"
-            )
+            raise ValueError("backward() requires a scalar output or loss")
 
         topo = []
         visited = set()
@@ -294,19 +203,11 @@ class Tensor:
 
         build_topo(self)
 
-        # d(loss) / d(loss) = 1
         if self.device.device == "CPU":
-            self.grad = np.ones_like(
-                self.data,
-                dtype=np.float32,
-            )
+            self.grad = np.ones_like(self.data, dtype=np.float32)
         else:
-            self.grad = cl_array.ones_like(
-                self.data,
-                dtype=np.float32,
-            )
+            self.grad = cl_array.ones_like(self.data, dtype=np.float32)
 
-        # Reverse topological order applies the chain rule.
         for tensor in reversed(topo):
             tensor._backward()
 
@@ -325,38 +226,18 @@ class Tensor:
 
             mask = (self.data > 0).astype(np.float32)
             grad = out.grad * mask
-
-            self.grad = (
-                grad
-                if self.grad is None
-                else self.grad + grad
-            )
+            self.grad = grad if self.grad is None else self.grad + grad
 
         out._backward = _backward
         return out
 
     def sigmoid(self):
-        """
-        Apply the sigmoid function element-wise:
-
-            sigmoid(x) = 1 / (1 + exp(-x))
-
-        The forward operation uses the OpenCL backend for GPU tensors
-        and NumPy for CPU tensors.
-        """
-
         if self.device.device == "CPU":
-            sigmoid_data = (
-                    1.0 / (1.0 + np.exp(-self.data))
-            ).astype(np.float32)
-
+            sigmoid_data = (1.0 / (1.0 + np.exp(-self.data))).astype(np.float32)
         elif self.device.device == "GPU":
             sigmoid_data = self.backend.sigmoid(self.data)
-
         else:
-            raise ValueError(
-                f"Invalid device type: {self.device.device}"
-            )
+            raise ValueError(f"Invalid device type: {self.device.device}")
 
         out = Tensor(
             sigmoid_data,
@@ -370,17 +251,8 @@ class Tensor:
             if not self.requires_grad:
                 return
 
-            grad = (
-                    out.grad
-                    * out.data
-                    * (1.0 - out.data)
-            )
-
-            self.grad = (
-                grad
-                if self.grad is None
-                else self.grad + grad
-            )
+            grad = out.grad * out.data * (1.0 - out.data)
+            self.grad = grad if self.grad is None else self.grad + grad
 
         out._backward = _backward
         return out
@@ -398,211 +270,96 @@ class Tensor:
             if not self.requires_grad:
                 return
 
-            # d|x|/dx:
-            #   1  when x > 0
-            #  -1  when x < 0
-            #   0  when x = 0
             sign = np.sign(self.data).astype(np.float32)
-
             grad = out.grad * sign
-
-            self.grad = (
-                grad
-                if self.grad is None
-                else self.grad + grad
-            )
+            self.grad = grad if self.grad is None else self.grad + grad
 
         out._backward = _backward
         return out
-    # ------------------------------------------------------------------
-    # Comparisons and representation
-    # ------------------------------------------------------------------
 
     def __gt__(self, value):
         if not isinstance(value, Tensor):
             value = self._ensure_tensor(value)
-
         return np.all(self.data > value.data)
 
     def __lt__(self, value):
         if not isinstance(value, Tensor):
             value = self._ensure_tensor(value)
-
         return np.all(self.data < value.data)
 
     def __repr__(self):
-        return (
-            f"Tensor("
-            f"data={self.data}, "
-            f"grad={self.grad}, "
-            f"requires_grad={self.requires_grad}"
-            f")"
-        )
+        return f"Tensor(data={self.data}, grad={self.grad}, requires_grad={self.requires_grad})"
 
     def _is_gpu(self):
         return self.device.device == "GPU"
 
     def _ones_like_data(self):
         if self._is_gpu():
-            return cl_array.ones(
-                self.data.queue,
-                self.data.shape,
-                dtype=np.float32,
-            )
-
-        return np.ones_like(
-            self.data,
-            dtype=np.float32,
-        )
+            return cl_array.ones(self.data.queue, self.data.shape, dtype=np.float32)
+        return np.ones_like(self.data, dtype=np.float32)
 
     def _zeros_like_data(self):
         if self._is_gpu():
-            return cl_array.zeros(
-                self.data.queue,
-                self.data.shape,
-                dtype=np.float32,
-            )
+            return cl_array.zeros(self.data.queue, self.data.shape, dtype=np.float32)
+        return np.zeros_like(self.data, dtype=np.float32)
 
-        return np.zeros_like(
-            self.data,
-            dtype=np.float32,
-        )
-
-    @staticmethod
-    def _accumulate_grad(tensor, grad):
-        if tensor.grad is None:
-            tensor.grad = grad
-        else:
-            tensor.grad = tensor.grad + grad
 
 def _normalize_shape(shape):
-    """Convert an integer or sequence into a tuple shape."""
     if isinstance(shape, int):
         return (shape,)
-
     return tuple(shape)
 
 
 def _create_tensor_from_host(data, device):
-    """
-    Create a Tensor from a NumPy array on the requested device.
-
-    CPU: keeps the data as a NumPy array.
-    GPU: uploads the data through OpenCL.
-    """
     data = np.asarray(data, dtype=np.float32)
 
     if device.device == "CPU":
-        return Tensor(
-            data,
-            device=device,
-        )
+        return Tensor(data, device=device)
 
     if device.device == "GPU":
         backend = OpenCLBackend.instance()
         gpu_data = backend.upload(data)
+        return Tensor(gpu_data, device=device)
 
-        return Tensor(
-            gpu_data,
-            device=device,
-        )
-
-    raise ValueError(
-        f"Invalid device type: {device.device}"
-    )
+    raise ValueError(f"Invalid device type: {device.device}")
 
 
 def ones_like(tensor: Tensor) -> Tensor:
-    """
-    Create a tensor filled with ones using the same shape and device.
-    """
     if not isinstance(tensor, Tensor):
         raise TypeError("ones_like() expects a Tensor")
 
-    data = np.ones(
-        tensor.data.shape,
-        dtype=np.float32,
-    )
-
-    return _create_tensor_from_host(
-        data,
-        tensor.device,
-    )
+    data = np.ones(tensor.data.shape, dtype=np.float32)
+    return _create_tensor_from_host(data, tensor.device)
 
 
 def zeros_like(tensor: Tensor) -> Tensor:
-    """
-    Create a tensor filled with zeros using the same shape and device.
-    """
     if not isinstance(tensor, Tensor):
         raise TypeError("zeros_like() expects a Tensor")
 
-    data = np.zeros(
-        tensor.data.shape,
-        dtype=np.float32,
-    )
-
-    return _create_tensor_from_host(
-        data,
-        tensor.device,
-    )
+    data = np.zeros(tensor.data.shape, dtype=np.float32)
+    return _create_tensor_from_host(data, tensor.device)
 
 
 def full_like(tensor: Tensor, fill_value: float) -> Tensor:
-    """
-    Create a tensor filled with fill_value using the same shape and device.
-    """
     if not isinstance(tensor, Tensor):
         raise TypeError("full_like() expects a Tensor")
 
-    data = np.full(
-        tensor.data.shape,
-        fill_value,
-        dtype=np.float32,
-    )
-
-    return _create_tensor_from_host(
-        data,
-        tensor.device,
-    )
+    data = np.full(tensor.data.shape, fill_value, dtype=np.float32)
+    return _create_tensor_from_host(data, tensor.device)
 
 
 def rand_like(tensor: Tensor) -> Tensor:
-    """
-    Create a random tensor using the same shape and device.
-    """
     if not isinstance(tensor, Tensor):
         raise TypeError("rand_like() expects a Tensor")
 
-    data = np.random.rand(
-        *tensor.data.shape
-    ).astype(np.float32)
-
-    return _create_tensor_from_host(
-        data,
-        tensor.device,
-    )
+    data = np.random.rand(*tensor.data.shape).astype(np.float32)
+    return _create_tensor_from_host(data, tensor.device)
 
 
 def rand(shape, device=None) -> Tensor:
-    """
-    Create a random float32 tensor on CPU or GPU.
-
-    Examples:
-        rand(3)
-        rand((2, 3))
-        rand((2, 3), device=Device("GPU"))
-    """
     if device is None:
         device = Device("CPU")
 
     shape = _normalize_shape(shape)
-
-    data = np.random.rand(
-        *shape
-    ).astype(np.float32)
-
-    return _create_tensor_from_host(
-        data,
-        device,
-    )
+    data = np.random.rand(*shape).astype(np.float32)
+    return _create_tensor_from_host(data, device)

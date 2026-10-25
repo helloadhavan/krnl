@@ -1,7 +1,8 @@
 import platform
 import psutil
 from typing import Literal
-from backends.backends.GPU_processer import get_gpu_info
+
+from .GPU_processer import get_gpu_info
 
 
 cpu_freq = psutil.cpu_freq()
@@ -9,13 +10,13 @@ max_clock = cpu_freq.max if cpu_freq else 0
 virtual_mem = psutil.virtual_memory()
 
 info = {
-    "platform": platform.system(),                       # e.g., 'Windows', 'Linux', 'Darwin'
-    "device": platform.processor(),                      # e.g., 'Intel64 Family 6 Model...'
-    "max_compute_units": psutil.cpu_count(logical=False), # Physical CPU cores
-    "max_work_group_size": psutil.cpu_count(logical=True),# Total logical threads
-    "global_mem_size": virtual_mem.total,                # Total system RAM (bytes)
-    "local_mem_size": None, # Placeholder (psutil cannot read CPU L1/L2 cache sizes directly)
-    "max_clock_frequency": max_clock                     # Max clock speed in MHz
+    "platform": platform.system(),
+    "device": platform.processor(),
+    "max_compute_units": psutil.cpu_count(logical=False),
+    "max_work_group_size": psutil.cpu_count(logical=True),
+    "global_mem_size": virtual_mem.total,
+    "local_mem_size": None,
+    "max_clock_frequency": max_clock,
 }
 
 
