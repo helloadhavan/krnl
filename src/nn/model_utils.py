@@ -1,4 +1,7 @@
-from src.backends.tensor import Tensor, rand, zeros_like
+from src.backends.tensor import (
+    Tensor,
+    rand
+)
 from src.backends.device import Device
 
 class Parameter(Tensor):

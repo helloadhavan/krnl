@@ -1,5 +1,5 @@
-from . import model_utils
 from . import loss
+from . import model_utils
 from . import optim
 
 from .model_utils import (
@@ -10,8 +10,8 @@ from .model_utils import (
 )
 
 __all__ = [
-    "model_utils",
     "loss",
+    "model_utils",
     "optim",
     "Module",
     "Parameter",
