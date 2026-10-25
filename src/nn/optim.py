@@ -291,39 +291,76 @@ class Muon(Optimizer):
         return (u @ vh).reshape(matrix.shape)
 
     def step(self):
+        """
+        Perform one Muon optimization step.
+
+        The momentum and orthogonalization calculations are performed
+        using NumPy because this implementation uses np.linalg.svd().
+        The final parameter update is copied back to the parameter's
+        device.
+        """
+
         for parameter in self.param:
             if parameter.grad is None:
                 continue
 
             parameter_id = id(parameter)
+
             if parameter_id not in self.state:
                 self.state[parameter_id] = {
-                    "momentum": self._zeros_like_data(parameter)
+                    "momentum": np.zeros_like(
+                        self._to_numpy(parameter.data),
+                        dtype=np.float32,
+                    )
                 }
 
             state = self.state[parameter_id]
+
+            # Convert gradient, parameter data, and momentum to NumPy.
             grad = self._to_numpy(parameter.grad)
+            parameter_data = self._to_numpy(parameter.data)
             momentum = self._to_numpy(state["momentum"])
 
-            if self.weight_decay != 0:
-                grad = grad + self.weight_decay * self._to_numpy(parameter.data)
+            # Optional L2 weight decay.
+            if self.weight_decay != 0.0:
+                grad = grad + (
+                        self.weight_decay * parameter_data
+                )
 
-            momentum = self.momentum * momentum + (1.0 - self.momentum) * grad
+            # Momentum update.
+            momentum = (
+                    self.momentum * momentum
+                    + (1.0 - self.momentum) * grad
+            )
+
+            # Muon-style orthogonalization.
             update = self._orthogonalize(momentum)
 
-            norm = np.linalg.norm(update)
-            if norm > 0:
-                update = update / (norm + self.eps)
+            # Normalize the update.
+            update_norm = np.linalg.norm(update)
 
+            if update_norm > self.eps:
+                update = update / (
+                        update_norm + self.eps
+                )
+
+            # Keep optimizer state as NumPy data.
             state["momentum"] = momentum
 
+            # Apply update on the parameter's device.
             if hasattr(parameter.data, "queue"):
-                parameter.data -= self.learning_rate * self._to_parameter_dtype(
+                gpu_update = self._to_parameter_dtype(
                     update,
                     parameter,
                 )
+
+                parameter.data -= (
+                        self.learning_rate * gpu_update
+                )
             else:
-                parameter.data -= self.learning_rate * update
+                parameter.data -= (
+                        self.learning_rate * update
+                )
 
 
 class MuonAdam(Optimizer):
@@ -375,7 +412,7 @@ class MuonAdam(Optimizer):
             }
 
     @staticmethod
-    def _zeros_like_data(parameter):
+    def _zeros_like_data(parameter: Parameter):
         data = parameter.data
 
         if hasattr(data, "queue"):
@@ -426,6 +463,7 @@ class MuonAdam(Optimizer):
         u, _, vh = np.linalg.svd(flat, full_matrices=False)
         return (u @ vh).reshape(matrix.shape)
 
+
     def step(self):
         self.step_count += 1
 
@@ -434,6 +472,7 @@ class MuonAdam(Optimizer):
                 continue
 
             parameter_id = id(parameter)
+
             if parameter_id not in self.state:
                 self.state[parameter_id] = {
                     "m": self._zeros_like_data(parameter),
@@ -441,33 +480,76 @@ class MuonAdam(Optimizer):
                 }
 
             state = self.state[parameter_id]
+
+            # Convert values to NumPy before using NumPy operations.
             grad = self._to_numpy(parameter.grad)
+            parameter_data = self._to_numpy(parameter.data)
 
-            if self.weight_decay != 0:
-                grad = grad + self.weight_decay * self._to_numpy(parameter.data)
+            # Ensure the state uses Adam's expected keys.
+            m = self._to_numpy(state["m"])
+            v = self._to_numpy(state["v"])
 
-            state["m"] = self.beta1 * state["m"] + (1.0 - self.beta1) * grad
-            state["v"] = self.beta2 * state["v"] + (1.0 - self.beta2) * (grad * grad)
+            if self.weight_decay != 0.0:
+                grad = grad + (
+                        self.weight_decay * parameter_data
+                )
 
-            m_hat = state["m"] / (1.0 - self.beta1 ** self.step_count)
-            v_hat = state["v"] / (1.0 - self.beta2 ** self.step_count)
+            # Update first moment.
+            m = (
+                    self.beta1 * m
+                    + (1.0 - self.beta1) * grad
+            )
 
-            update = m_hat / (np.sqrt(v_hat) + self.epsilon)
+            # Update second moment.
+            v = (
+                    self.beta2 * v
+                    + (1.0 - self.beta2) * (grad * grad)
+            )
+
+            # Bias correction.
+            m_hat = m / (
+                    1.0 - self.beta1 ** self.step_count
+            )
+
+            v_hat = v / (
+                    1.0 - self.beta2 ** self.step_count
+            )
+
+            # Adam adaptive update.
+            update = m_hat / (
+                    np.sqrt(v_hat) + self.epsilon
+            )
+
+            # Muon orthogonalization.
             update = self._orthogonalize(update)
 
-            norm = np.linalg.norm(update)
-            if norm > 0:
-                update = update / (norm + self.epsilon)
+            # Normalize the update.
+            update_norm = np.linalg.norm(update)
 
+            if update_norm > self.epsilon:
+                update = update / (
+                        update_norm + self.epsilon
+                )
+
+            # Keep optimizer state on the CPU because the current
+            # orthogonalization uses NumPy/SVD.
+            state["m"] = m
+            state["v"] = v
+
+            # Apply the final update to CPU or GPU parameters.
             if hasattr(parameter.data, "queue"):
-                parameter.data -= self.learning_rate * self._to_parameter_dtype(
+                gpu_update = self._to_parameter_dtype(
                     update,
                     parameter,
                 )
+
+                parameter.data -= (
+                        self.learning_rate * gpu_update
+                )
             else:
-                parameter.data -= self.learning_rate * update
-
-
+                parameter.data -= (
+                        self.learning_rate * update
+                )
 MuonWithAdamAux = MuonAdam
 MuonWithAdamAuxiliary = MuonAdam
 MuonAdamAux = MuonAdam

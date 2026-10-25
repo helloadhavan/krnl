@@ -389,6 +389,42 @@ class Tensor:
             f")"
         )
 
+    def _is_gpu(self):
+        return self.device.device == "GPU"
+
+    def _ones_like_data(self):
+        if self._is_gpu():
+            return cl_array.ones(
+                self.data.queue,
+                self.data.shape,
+                dtype=np.float32,
+            )
+
+        return np.ones_like(
+            self.data,
+            dtype=np.float32,
+        )
+
+    def _zeros_like_data(self):
+        if self._is_gpu():
+            return cl_array.zeros(
+                self.data.queue,
+                self.data.shape,
+                dtype=np.float32,
+            )
+
+        return np.zeros_like(
+            self.data,
+            dtype=np.float32,
+        )
+
+    @staticmethod
+    def _accumulate_grad(tensor, grad):
+        if tensor.grad is None:
+            tensor.grad = grad
+        else:
+            tensor.grad = tensor.grad + grad
+
 def _normalize_shape(shape):
     """Convert an integer or sequence into a tuple shape."""
     if isinstance(shape, int):
