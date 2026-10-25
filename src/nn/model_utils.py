@@ -82,3 +82,12 @@ class ReLU(Module):
             raise TypeError("Input must be a Tensor.")
         return x.relu()
 
+class Sigmoid(Module):
+    """
+    A simple sigmoid activation layer.
+    """
+
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        return x.sigmoid()
