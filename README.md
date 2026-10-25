@@ -43,7 +43,7 @@ To use the OpenCL backend, make sure your system has a compatible OpenCL runtime
 ## Quick start
 
 ```python
-from src.backends.tensor import Tensor
+from backends.backends.tensor import Tensor
 
 x = Tensor(2.0)
 w = Tensor(3.0, requires_grad=True)
@@ -85,7 +85,7 @@ The OpenCL path uses PyOpenCL to move arrays to an accelerator, execute simple k
 
 ## Neural network utilities
 
-The library includes a minimal `src/nn` module with building blocks for simple models.
+The library includes a minimal `nn` module with building blocks for simple models.
 
 ### Module and Parameter
 
@@ -104,8 +104,8 @@ The library includes a few basic layer types:
 Example:
 
 ```python
-from src.nn.model_utils import Linear, ReLU
-from src.backends.tensor import Tensor
+from nn.model_utils import Linear, ReLU
+from backends.backends.tensor import Tensor
 
 layer1 = Linear(in_features=4, out_features=8)
 activation = ReLU()
@@ -116,7 +116,7 @@ y = activation(layer1(x))
 
 ## Loss functions
 
-The project includes a small set of regression-style loss implementations in `src/nn/loss.py`.
+The project includes a small set of regression-style loss implementations in `nn`.
 
 ### MSELoss
 
@@ -145,7 +145,7 @@ A smooth piecewise loss that behaves like squared error for small residuals and 
 Example:
 
 ```python
-from src.nn.loss import MSELoss, MAELoss, HuberLoss
+from nn import MSELoss, MAELoss, HuberLoss
 
 criterion = MSELoss()
 loss = criterion(predictions, targets)
@@ -153,7 +153,7 @@ loss = criterion(predictions, targets)
 
 ## Optimizers
 
-The library includes several optimization strategies in `src/nn/optim.py`.
+The library includes several optimization strategies in `nn`.
 
 ### SGD
 
@@ -180,7 +180,7 @@ This optimizer combines Muon-style orthogonal updates with Adam-like moment esti
 Example:
 
 ```python
-from src.nn.optim import SGD, Adam, Muon, MuonAdam
+from nn.optim import SGD, Adam, Muon, MuonAdam
 
 sgd = SGD(parameters=model_parameters, learning_rate=0.01)
 adam = Adam(parameters=model_parameters, learning_rate=0.001)
@@ -193,8 +193,8 @@ muon_adam = MuonAdam(parameters=model_parameters, learning_rate=0.02)
 A typical training loop looks like this:
 
 ```python
-from src.nn.loss import MSELoss
-from src.nn.optim import SGD
+from nn import MSELoss
+from nn.optim import SGD
 
 model = ...
 criterion = MSELoss()

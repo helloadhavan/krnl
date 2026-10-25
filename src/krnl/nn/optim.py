@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.nn.model_utils import Parameter
+from nn.model_utils import Parameter
 
 
 class Optimizer:

@@ -1,4 +1,4 @@
-from src.backends import tensor
+from backends.backends import tensor
 from random import randint
 
 dx = tensor.Tensor(randint(1, 10))

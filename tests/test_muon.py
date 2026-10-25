@@ -1,7 +1,7 @@
 import numpy as np
 
-import src.nn as nn
-from src.backends.tensor import Tensor
+import nn as nn
+from backends.backends.tensor import Tensor
 
 
 def main():

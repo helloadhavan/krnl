@@ -1,8 +1,8 @@
-from src.backends.tensor import (
+from backends.tensor import (
     Tensor,
     rand
 )
-from src.backends.device import Device
+from backends.device import Device
 
 class Parameter(Tensor):
     """

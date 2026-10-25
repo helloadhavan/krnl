@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 import nn
-from src.backends.tensor import Tensor
+from backends.backends.tensor import Tensor
 from nn import Linear, ReLU, optim
 
 

@@ -2,7 +2,7 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import Program
-from src.backends.kernels import MATMUL_KERNEL, SIGMOID_KERNEL
+from backends.backends.kernels import MATMUL_KERNEL, SIGMOID_KERNEL
 
 def get_gpu_info():
     platforms = cl.get_platforms()

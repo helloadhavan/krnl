@@ -1,4 +1,4 @@
-from src.backends.tensor import Tensor
+from backends.tensor import Tensor
 
 class BaseCriterion:
     """

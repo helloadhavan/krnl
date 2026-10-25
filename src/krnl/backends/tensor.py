@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pyopencl.array as cl_array
 
-from src.backends.GPU_processer import OpenCLBackend
-from src.backends.device import Device
+from backends.backends.GPU_processer import OpenCLBackend
+from backends.backends.device import Device
 
 
 class Tensor:

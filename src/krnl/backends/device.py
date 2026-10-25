@@ -1,7 +1,7 @@
 import platform
 import psutil
 from typing import Literal
-from src.backends.GPU_processer import get_gpu_info
+from backends.backends.GPU_processer import get_gpu_info
 
 
 cpu_freq = psutil.cpu_freq()
