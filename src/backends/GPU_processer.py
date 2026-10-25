@@ -2,7 +2,7 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import Program
-from src.backends.kernels import MATMUL_KERNEL
+from src.backends.kernels import MATMUL_KERNEL, SIGMOID_KERNEL
 
 def get_gpu_info():
     platforms = cl.get_platforms()
@@ -37,6 +37,7 @@ class OpenCLBackend:
         self.context = cl.create_some_context()
         self.queue = cl.CommandQueue(self.context)
         self.matmul_program = Program(self.context, MATMUL_KERNEL).build()
+        self.sigmoid_program = Program(self.context, SIGMOID_KERNEL).build()
 
     def upload(self, data):
         data = np.ascontiguousarray(data)
@@ -111,6 +112,36 @@ class OpenCLBackend:
             np.int32(N)
         )
 
-        return out
+    def sigmoid(self, input_array: cl_array.Array):
+        """
+        Apply sigmoid element-wise to a GPU float32 array.
+
+        sigmoid(x) = 1 / (1 + exp(-x))
+        """
+
+        if not isinstance(input_array, cl_array.Array):
+            raise TypeError(
+                "sigmoid expects a pyopencl.array.Array"
+            )
+
+        if input_array.dtype != np.dtype(np.float32):
+            raise TypeError(
+                "sigmoid supports float32 arrays only"
+            )
+
+        output = cl_array.empty_like(input_array)
+
+        count = np.uint32(input_array.size)
+
+        self.sigmoid_program.sigmoid_f32(
+            self.queue,
+            (input_array.size,),
+            None,
+            input_array.data,
+            output.data,
+            count,
+        )
+
+        return output
 
 
