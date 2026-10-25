@@ -1,18 +1,18 @@
 # krnl
 
-krnl is a small, experimental machine learning library built in Python with NumPy and OpenCL. It is designed for learning how tensor libraries work, how automatic differentiation is implemented, and how CPU/GPU execution can be exposed through a very small API.
+`krnl` is a lightweight, educational machine learning library built in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation. The project is designed to help understand the core ideas behind modern deep learning frameworks: tensors, autograd, computational graphs, layers, losses, and optimization.
 
-This project is intentionally lightweight and educational rather than production-ready. It focuses on the core ideas behind modern ML frameworks: tensors, computational graphs, gradients, and simple device-aware execution.
+This library aims to stay small and readable rather than production-focused. It is intentionally useful for learning how neural networks and training loops work under the hood.
 
-## Features
+## Highlights
 
-- Custom tensor implementation with forward and backward passes
-- Element-wise arithmetic for scalar and array operations
-- Gradient accumulation for training-style workflows
-- Scalar loss computation and optimization using backpropagation
-- Minimal device abstraction for CPU and GPU selection
-- OpenCL backend for float32 GPU computations
-- Simple neural network building blocks such as `Linear` and `ReLU`
+- Tensor-based autograd engine
+- NumPy-backed CPU execution
+- OpenCL backend experiments for GPU-style computation
+- Basic neural network building blocks
+- Optimizer implementations for training
+- Common loss functions for regression and learning tasks
+- Simple, traceable code for educational use
 
 ## Installation
 
@@ -23,7 +23,7 @@ git clone https://github.com/helloadhavan/krnl.git
 cd krnl
 ```
 
-Create and activate a virtual environment:
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
@@ -36,9 +36,9 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-### Optional GPU setup
+### Optional OpenCL setup
 
-To use the OpenCL backend, make sure your system has a valid OpenCL runtime and compatible GPU drivers installed.
+To use the OpenCL backend, make sure your system has a compatible OpenCL runtime and drivers installed.
 
 ## Quick start
 
@@ -61,30 +61,153 @@ print(b.grad)
 
 This example creates a small computational graph, computes a scalar loss, and backpropagates gradients through the graph.
 
-## Core components
+## Core concepts
 
 ### Tensor
 
-The `Tensor` class is the foundation of the library. It stores data, tracks device placement, and supports differentiation through custom `__add__`, `__sub__`, `__mul__`, and `__pow__` implementations. The library also includes a `backward()` method for reverse-mode autodiff.
+The `Tensor` class is the foundation of the project. It stores numeric data, tracks computation history, and supports differentiation through custom arithmetic and autograd operations.
+
+Key features include:
+
+- scalar and array arithmetic
+- forward pass tracking
+- backward gradient propagation
+- device awareness for CPU/GPU execution
+- support for differentiable operations used in model training
 
 ### Device abstraction
 
-The `Device` class provides a simple CPU/GPU abstraction. It lets the rest of the library reason about where a tensor should be computed and what hardware features are available.
+The `Device` abstraction allows the library to reason about whether computation should happen on CPU or a GPU-like backend. This keeps the design simple while making it easier to experiment with accelerator-backed operations.
 
 ### OpenCL backend
 
-The GPU path uses PyOpenCL to upload arrays to the device, perform operations, and run a basic matrix multiplication kernel. This makes the project useful for learning how accelerator-backed tensor operations fit into a small ML stack.
+The OpenCL path uses PyOpenCL to move arrays to an accelerator, execute simple kernels, and support basic tensor operations. It is useful for experimentation and understanding how low-level device execution fits into a training loop.
 
-### Neural network utilities
+## Neural network utilities
 
-The project includes a minimal `src/nn` layer for building simple modules, including:
+The library includes a minimal `src/nn` module with building blocks for simple models.
 
-- `Module`
-- `Parameter`
-- `Linear`
-- `ReLU`
+### Module and Parameter
 
-These utilities are intentionally simple and easy to trace through when learning how training loops and model building blocks work.
+`Module` is the base class for neural network components. It provides a simple interface for registering trainable parameters.
+
+`Parameter` wraps a tensor and marks it as trainable so that it participates in gradient-based optimization.
+
+### Layers
+
+The library includes a few basic layer types:
+
+- `Linear`: a dense layer implementing `y = xW^T + b`
+- `ReLU`: elementwise rectified linear activation
+- `Sigmoid`: elementwise sigmoid activation
+
+Example:
+
+```python
+from src.nn.model_utils import Linear, ReLU
+from src.backends.tensor import Tensor
+
+layer1 = Linear(in_features=4, out_features=8)
+activation = ReLU()
+
+x = Tensor([[1.0, 2.0, 3.0, 4.0]])
+y = activation(layer1(x))
+```
+
+## Loss functions
+
+The project includes a small set of regression-style loss implementations in `src/nn/loss.py`.
+
+### MSELoss
+
+Mean Squared Error:
+
+```python
+(predicted - target) ** 2
+```
+
+This computes the squared error across the prediction and is commonly used for regression tasks.
+
+### MAELoss
+
+Mean Absolute Error:
+
+```python
+abs(predicted - target)
+```
+
+This is useful when you want the average magnitude of the prediction error without squaring it.
+
+### HuberLoss
+
+A smooth piecewise loss that behaves like squared error for small residuals and absolute error for larger residuals. It is often used to reduce sensitivity to outliers.
+
+Example:
+
+```python
+from src.nn.loss import MSELoss, MAELoss, HuberLoss
+
+criterion = MSELoss()
+loss = criterion(predictions, targets)
+```
+
+## Optimizers
+
+The library includes several optimization strategies in `src/nn/optim.py`.
+
+### SGD
+
+Stochastic Gradient Descent updates parameters by moving them in the direction opposite the gradient:
+
+```python
+parameter = parameter - learning_rate * gradient
+```
+
+This is the simplest gradient-based optimizer and is useful for understanding the basics of training.
+
+### Adam
+
+Adam combines momentum and adaptive learning rates using first and second moment estimates. It is one of the most common modern optimizers and is useful when training neural networks more stably than plain SGD.
+
+### Muon
+
+Muon is a momentum-based optimizer with an orthogonalized update direction. It introduces a more structure-aware update strategy and is included as an experimental optimizer in the library.
+
+### MuonAdam
+
+This optimizer combines Muon-style orthogonal updates with Adam-like moment estimates, making it a hybrid approach for experimentation and learning.
+
+Example:
+
+```python
+from src.nn.optim import SGD, Adam, Muon, MuonAdam
+
+sgd = SGD(parameters=model_parameters, learning_rate=0.01)
+adam = Adam(parameters=model_parameters, learning_rate=0.001)
+muon = Muon(parameters=model_parameters, learning_rate=0.02)
+muon_adam = MuonAdam(parameters=model_parameters, learning_rate=0.02)
+```
+
+## Training workflow
+
+A typical training loop looks like this:
+
+```python
+from src.nn.loss import MSELoss
+from src.nn.optim import SGD
+
+model = ...
+criterion = MSELoss()
+optimizer = SGD(model._parameters.values(), learning_rate=0.01)
+
+for batch_x, batch_y in data:
+    predictions = model(batch_x)
+    loss = criterion(predictions, batch_y)
+
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+```
 
 ## Repository structure
 
@@ -122,37 +245,37 @@ python src/tests/test_tensor.py
 python src/tests/test_opencl_backend.py
 ```
 
-The OpenCL tests depend on an available OpenCL installation and a compatible device.
+The OpenCL tests require a valid OpenCL installation and compatible device support.
 
 ## Project status
 
-This library is a small educational framework for building intuition around deep learning internals. It is not intended to replace mature libraries such as PyTorch or TensorFlow.
+`krnl` is an educational framework for understanding the internals of deep learning systems. It is not intended to replace established libraries such as PyTorch or TensorFlow.
 
 Current focus areas include:
 
-- tensor arithmetic
-- basic gradient-based optimization
+- tensor arithmetic and autograd
+- gradient-based optimization
 - CPU execution with NumPy
-- GPU execution with OpenCL
-- minimal neural network primitives
+- GPU/OpenCL experimentation
+- small neural network primitives
 
 ## Contributing
 
-Contributions are welcome for:
+Contributions are welcome in areas such as:
 
-- additional tensor operations
-- more robust autograd support
-- improved device handling
-- better model utilities
-- performance improvements
-- tests and documentation
+- more layer types
+- additional loss functions
+- more optimization algorithms
+- clearer documentation
+- stronger tests
+- device and performance improvements
 
-If you are extending the project, keep the implementation simple and readable so it remains useful as a learning tool.
+The project remains intentionally simple and readable so it can serve as a learning tool.
 
 ## License
 
-This project does not currently include a license file. If you plan to distribute or publish it publicly, consider adding an explicit license such as MIT or Apache 2.0.
+This repository does not currently include a license file. If you plan to distribute or publish it publicly, consider adding a license such as MIT or Apache 2.0.
 
 ## Acknowledgements
 
-This project is built for experimentation and education in the areas of tensor math, computational graphs, and device-aware execution.
+This project is built for experimentation and education in tensor math, computational graphs, optimization, and device-aware execution.
