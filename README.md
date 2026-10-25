@@ -4,15 +4,6 @@ krnl is a small, experimental machine learning library built in Python with NumP
 
 This project is intentionally lightweight and educational rather than production-ready. It focuses on the core ideas behind modern ML frameworks: tensors, computational graphs, gradients, and simple device-aware execution.
 
-## Why krnl?
-
-- Small and easy to understand
-- Built around a custom `Tensor` abstraction
-- Supports automatic differentiation for simple training loops
-- Works on CPU via NumPy
-- Can use OpenCL for GPU-backed operations
-- Suitable for experimentation, research, and learning
-
 ## Features
 
 - Custom tensor implementation with forward and backward passes
