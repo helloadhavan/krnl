@@ -335,6 +335,56 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def sigmoid(self):
+        """
+        Apply the sigmoid function element-wise:
+
+            sigmoid(x) = 1 / (1 + exp(-x))
+
+        The forward operation uses the OpenCL backend for GPU tensors
+        and NumPy for CPU tensors.
+        """
+
+        if self.device.device == "CPU":
+            sigmoid_data = (
+                    1.0 / (1.0 + np.exp(-self.data))
+            ).astype(np.float32)
+
+        elif self.device.device == "GPU":
+            sigmoid_data = self.backend.sigmoid(self.data)
+
+        else:
+            raise ValueError(
+                f"Invalid device type: {self.device.device}"
+            )
+
+        out = Tensor(
+            sigmoid_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="sigmoid",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            grad = (
+                    out.grad
+                    * out.data
+                    * (1.0 - out.data)
+            )
+
+            self.grad = (
+                grad
+                if self.grad is None
+                else self.grad + grad
+            )
+
+        out._backward = _backward
+        return out
+
     def __abs__(self):
         out = Tensor(
             np.abs(self.data),
