@@ -22,6 +22,20 @@ __kernel void add_f32(
 }
 
 
+__kernel void fill_f32(
+    __global float *out,
+    const float value,
+    const uint n
+)
+{
+    const uint index = get_global_id(0);
+
+    if (index < n) {
+        out[index] = value;
+    }
+}
+
+
 __kernel void sub_f32(
     __global const float *a,
     __global const float *b,
