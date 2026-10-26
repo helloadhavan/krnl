@@ -1,8 +1,8 @@
 # krnl
 
-`krnl` is a lightweight, educational machine learning library written in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation. It is designed to help developers and students understand how neural networks, autograd, and training loops work under the hood.
+`krnl` is a lightweight, educational machine learning library written in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation
 
-The project intentionally stays small, readable, and easy to follow rather than aiming to match the scale or production readiness of larger libraries such as PyTorch or TensorFlow.
+The project intentionally stays small, readable, and easy to follow rather than being production ready.
 
 ## Highlights
 
@@ -12,7 +12,6 @@ The project intentionally stays small, readable, and easy to follow rather than 
 - Basic neural network building blocks
 - Optimizer implementations for training
 - Common loss functions for regression and learning tasks
-- Clear, traceable code for educational use
 
 ## Installation
 
