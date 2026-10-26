@@ -85,7 +85,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.data + other.data,
+            self.backend.add(self, other.data) if self.device.device == "GPU" else self.data + other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -111,7 +111,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.data - other.data,
+            self.backend.sub(self, other.data) if self.device.device == "GPU" else self.data - other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -139,7 +139,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.data * other.data,
+            self.backend.mul(self, other.data) if self.device.device == "GPU" else self.data * other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -162,6 +162,31 @@ class Tensor:
 
     def __rmul__(self, other):
         return self * other
+
+    def __matmul__(self, other):
+        other = self._ensure_tensor(other)
+
+        out = Tensor(
+            self.backend.matmul(self, other.data) if self.device.device == "GPU" else self.data @ other.data,
+            device=self.device,
+            requires_grad=(self.requires_grad or other.requires_grad),
+            _children=(self, other),
+            _op="*",
+        )
+
+        def _backward():
+            if self.requires_grad:
+                grad = out.grad @ other.data.T
+                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
+                self._accumulate_grad(self, grad)
+
+            if other.requires_grad:
+                grad = out.grad @ self.data.T
+                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
+                self._accumulate_grad(other, grad)
+
+        out._backward = _backward
+        return out
 
     def __pow__(self, power):
         if not isinstance(power, (int, float)):
