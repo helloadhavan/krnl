@@ -1,3 +1,11 @@
+"""
+OpenCL kernel source definitions.
+
+This file contains only OpenCL C source code.
+Kernel compilation and execution are handled by GPU_processer.py.
+"""
+
+
 ELEMENTWISE_KERNEL = r"""
 __kernel void add_f32(
     __global const float *a,
@@ -6,13 +14,12 @@ __kernel void add_f32(
     const uint n
 )
 {
-    const uint index = get_global_id(0);
+    const uint i = get_global_id(0);
 
-    if (index < n) {
-        out[index] = a[index] + b[index];
+    if (i < n) {
+        out[i] = a[i] + b[i];
     }
 }
-
 
 __kernel void sub_f32(
     __global const float *a,
@@ -21,10 +28,10 @@ __kernel void sub_f32(
     const uint n
 )
 {
-    const uint index = get_global_id(0);
+    const uint i = get_global_id(0);
 
-    if (index < n) {
-        out[index] = a[index] - b[index];
+    if (i < n) {
+        out[i] = a[i] - b[i];
     }
 }
 
@@ -36,10 +43,10 @@ __kernel void mul_f32(
     const uint n
 )
 {
-    const uint index = get_global_id(0);
+    const uint i = get_global_id(0);
 
-    if (index < n) {
-        out[index] = a[index] * b[index];
+    if (i < n) {
+        out[i] = a[i] * b[i];
     }
 }
 
@@ -51,98 +58,210 @@ __kernel void div_f32(
     const uint n
 )
 {
-    const uint index = get_global_id(0);
+    const uint i = get_global_id(0);
 
-    if (index < n) {
-        out[index] = a[index] / b[index];
+    if (i < n) {
+        out[i] = a[i] / b[i];
+    }
+}
+
+
+__kernel void neg_f32(
+    __global const float *a,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = -a[i];
+    }
+}
+
+
+__kernel void abs_f32(
+    __global const float *a,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = fabs(a[i]);
+    }
+}
+
+
+__kernel void pow_f32(
+    __global const float *a,
+    __global float *out,
+    const float exponent,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = pow(a[i], exponent);
+    }
+}
+
+
+__kernel void relu_f32(
+    __global const float *a,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = a[i] > 0.0f ? a[i] : 0.0f;
+    }
+}
+
+
+__kernel void relu_backward_f32(
+    __global const float *input,
+    __global const float *gradient,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = input[i] > 0.0f ? gradient[i] : 0.0f;
+    }
+}
+
+
+__kernel void sigmoid_f32(
+    __global const float *input,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = 1.0f / (1.0f + exp(-input[i]));
+    }
+}
+
+
+__kernel void sigmoid_backward_f32(
+    __global const float *output,
+    __global const float *gradient,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        const float y = output[i];
+        out[i] = gradient[i] * y * (1.0f - y);
+    }
+}
+
+
+__kernel void fill_f32(
+    __global float *out,
+    const float value,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = value;
+    }
+}
+
+
+__kernel void add_row_bias_f32(
+    __global const float *input,
+    __global const float *bias,
+    __global float *out,
+    const uint rows,
+    const uint columns
+)
+{
+    const uint i = get_global_id(0);
+    const uint total = rows * columns;
+
+    if (i < total) {
+        const uint column = i % columns;
+        out[i] = input[i] + bias[column];
+    }
+}
+
+
+__kernel void sum_to_row_f32(
+    __global const float *input,
+    __global float *out,
+    const uint rows,
+    const uint columns
+)
+{
+    const uint column = get_global_id(0);
+
+    if (column < columns) {
+        float value = 0.0f;
+
+        for (uint row = 0; row < rows; ++row) {
+            value += input[row * columns + column];
+        }
+
+        out[column] = value;
     }
 }
 """
 
 
 MATMUL_KERNEL = r"""
-__kernel void matmul_tiled_f32(
+__kernel void matmul_f32(
     __global const float *A,
     __global const float *B,
     __global float *C,
-
     const uint M,
     const uint K,
-    const uint N,
-
-    const uint tile_size,
-
-    __local float *tile_A,
-    __local float *tile_B
+    const uint N
 )
 {
-    const uint local_row = get_local_id(0);
-    const uint local_col = get_local_id(1);
+    const uint row = get_global_id(0);
+    const uint column = get_global_id(1);
 
-    const uint group_row = get_group_id(0);
-    const uint group_col = get_group_id(1);
+    if (row < M && column < N) {
+        float value = 0.0f;
 
-    const uint row = group_row * tile_size + local_row;
-    const uint col = group_col * tile_size + local_col;
-
-    const uint local_index =
-        local_row * tile_size + local_col;
-
-    float accumulator = 0.0f;
-
-    const uint number_of_tiles =
-        (K + tile_size - 1) / tile_size;
-
-    for (uint tile = 0; tile < number_of_tiles; tile++) {
-        const uint a_col = tile * tile_size + local_col;
-        const uint b_row = tile * tile_size + local_row;
-
-        /*
-         * Load one element of A into local memory.
-         * Out-of-range elements are padded with zero.
-         */
-        if (row < M && a_col < K) {
-            tile_A[local_index] =
-                A[row * K + a_col];
-        } else {
-            tile_A[local_index] = 0.0f;
+        for (uint k = 0; k < K; ++k) {
+            value += A[row * K + k] * B[k * N + column];
         }
 
-        /*
-         * Load one element of B into local memory.
-         * Out-of-range elements are padded with zero.
-         */
-        if (b_row < K && col < N) {
-            tile_B[local_index] =
-                B[b_row * N + col];
-        } else {
-            tile_B[local_index] = 0.0f;
-        }
-
-        /*
-         * Make sure the entire tile has been loaded before
-         * any work-item reads from it.
-         */
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        for (uint i = 0; i < tile_size; i++) {
-            accumulator +=
-                tile_A[local_row * tile_size + i] *
-                tile_B[i * tile_size + local_col];
-        }
-
-        /*
-         * Make sure no work-item starts overwriting the tile
-         * while another work-item is still reading it.
-         */
-        barrier(CLK_LOCAL_MEM_FENCE);
+        C[row * N + column] = value;
     }
+}
+"""
 
-    /*
-     * Do not write padded rows or columns.
-     */
-    if (row < M && col < N) {
-        C[row * N + col] = accumulator;
+
+TRANSPOSE_KERNEL = r"""
+__kernel void transpose_f32(
+    __global const float *input,
+    __global float *output,
+    const uint rows,
+    const uint columns
+)
+{
+    const uint row = get_global_id(0);
+    const uint column = get_global_id(1);
+
+    if (row < rows && column < columns) {
+        output[column * rows + row] =
+            input[row * columns + column];
     }
 }
 """

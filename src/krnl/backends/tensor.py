@@ -3,7 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pyopencl.array as cl_array
 
-from .GPU_processer import OpenCLBackend
+from .GPU_processer import (
+    GPUArray,
+    OpenCLBackend,
+)
 from .device import Device
 
 
@@ -24,23 +27,29 @@ class Tensor:
         self.grad = None
 
         if self.device.device == "GPU":
-            self.backend = OpenCLBackend.instance()
+            self.backend = OpenCLBackend.instance(
+                device_id=self.device.device_id
+            )
 
-        if isinstance(data, Tensor):
-            self.data = data.data
+            if isinstance(data, Tensor):
+                self.data = data.data
 
-        elif self.device.device == "CPU":
-            self.data = np.asarray(data, dtype=np.float32)
-
-        elif self.device.device == "GPU":
-            if isinstance(data, cl_array.Array):
+            elif isinstance(data, GPUArray):
                 self.data = data
-            else:
-                data = np.asarray(data, dtype=np.float32)
-                self.data = self.backend.upload(data)
 
+            else:
+                self.data = GPUArray(
+                    data,
+                    backend=self.backend,
+                )
+        elif self.device.device == "CPU":
+            self.backend = None
+            self.data = np.asarray(
+                data,
+                dtype=np.float32,
+            )
         else:
-            raise ValueError(f"Invalid device type: {self.device.device}")
+            raise TypeError("Non supported device")
 
         self._prev = set(_children)
         self._op = _op
@@ -314,6 +323,18 @@ class Tensor:
 
     def __repr__(self):
         return f"Tensor(data={self.data}, grad={self.grad}, requires_grad={self.requires_grad})"
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def ndim(self):
+        return self.data.ndim
+
+    @property
+    def T(self):
+        return self.data.T
 
     def _is_gpu(self):
         return self.device.device == "GPU"

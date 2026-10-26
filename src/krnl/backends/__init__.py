@@ -1,7 +1,7 @@
 """Backends package for krnl."""
 
 from .device import Device
-from .GPU_processer import OpenCLBackend, get_gpu_info
+from .GPU_processer import OpenCLBackend, get_gpu_info, GPUArray
 from .tensor import (
     Tensor,
     full_like,
@@ -14,6 +14,7 @@ from .tensor import (
 __all__ = [
     "Tensor",
     "Device",
+    "GPUArray",
     "OpenCLBackend",
     "get_gpu_info",
     "ones_like",
