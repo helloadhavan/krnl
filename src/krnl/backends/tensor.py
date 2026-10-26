@@ -3,7 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pyopencl.array as cl_array
 
-from .GPU_processer import OpenCLBackend
+from .GPU_processer import (
+    GPUArray,
+    OpenCLBackend,
+)
 from .device import Device
 
 
