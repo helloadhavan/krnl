@@ -324,6 +324,18 @@ class Tensor:
     def __repr__(self):
         return f"Tensor(data={self.data}, grad={self.grad}, requires_grad={self.requires_grad})"
 
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def ndim(self):
+        return self.data.ndim
+
+    @property
+    def T(self):
+        return self.data.T
+
     def _is_gpu(self):
         return self.device.device == "GPU"
 
