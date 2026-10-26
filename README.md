@@ -1,29 +1,29 @@
 # krnl
 
-`krnl` is a lightweight, educational machine learning library built in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation. The project is designed to help understand the core ideas behind modern deep learning frameworks: tensors, autograd, computational graphs, layers, losses, and optimization.
+`krnl` is a lightweight, educational machine learning library written in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation. It is designed to help developers and students understand how neural networks, autograd, and training loops work under the hood.
 
-This library aims to stay small and readable rather than production-focused. It is intentionally useful for learning how neural networks and training loops work under the hood.
+The project intentionally stays small, readable, and easy to follow rather than aiming to match the scale or production readiness of larger libraries such as PyTorch or TensorFlow.
 
 ## Highlights
 
 - Tensor-based autograd engine
 - NumPy-backed CPU execution
-- OpenCL backend experiments for GPU-style computation
+- Experimental OpenCL backend for GPU-style computation
 - Basic neural network building blocks
 - Optimizer implementations for training
 - Common loss functions for regression and learning tasks
-- Simple, traceable code for educational use
+- Clear, traceable code for educational use
 
 ## Installation
 
-Create and actiavte virtual environment:
+Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 ```
 
-Install package:
+Install the package:
 
 ```bash
 pip install krnl
@@ -43,7 +43,6 @@ from krnl import Tensor
 
 
 def main():
-
     dx = []
     dy = []
 
@@ -67,12 +66,7 @@ def main():
     weight = model._parameters["weight"]
     bias = model._parameters["bias"]
 
-    print(
-        "Initial weight:",
-        weight.data,
-        "| Initial bias:",
-        bias.data,
-    )
+    print("Initial weight:", weight.data, "| Initial bias:", bias.data)
 
     for epoch in range(100):
         total_loss = 0.0
@@ -80,38 +74,18 @@ def main():
         for x_value, y_value in zip(dx, dy):
             optimizer.zero_grad()
 
-            x = Tensor(
-                [[x_value]],
-            )
-
-            target = Tensor(
-                [[y_value]],
-            )
-
-            # Forward pass.
+            x = Tensor([[x_value]])
+            target = Tensor([[y_value]])
 
             prediction = model(x)
-
-            # MSE loss.
-            loss = criterion(
-                prediction,
-                target,
-            )
-
-            # Backward pass.
+            loss = criterion(prediction, target)
             loss.backward()
-
-            # Update parameters.
-
             optimizer.step()
 
-            total_loss += float(
-                np.asarray(loss.data).reshape(-1)[0]
-            )
+            total_loss += float(np.asarray(loss.data).reshape(-1)[0])
 
         if epoch % 10 == 0:
             average_loss = total_loss / len(dx)
-
             print(
                 f"epoch={epoch:03d}, "
                 f"loss={average_loss:.6f}, "
@@ -122,12 +96,8 @@ def main():
     print("\nFinal predictions:")
 
     for x_value, expected_value in zip(dx, dy):
-        x = Tensor(
-            [[x_value]],
-        )
-
+        x = Tensor([[x_value]])
         prediction = model(x)
-
         print(
             f"x={x_value:.1f}, "
             f"predicted={prediction.data}, "
@@ -139,7 +109,7 @@ if __name__ == "__main__":
     main()
 ```
 
-This example creates a small computational graph, computes a scalar loss, and backpropagates gradients through the graph.
+This example builds a small computational graph, computes a scalar loss, and backpropagates gradients through the graph.
 
 ## Core concepts
 
@@ -150,18 +120,18 @@ The `Tensor` class is the foundation of the project. It stores numeric data, tra
 Key features include:
 
 - scalar and array arithmetic
-- forward pass tracking
+- forward-pass tracking
 - backward gradient propagation
 - device awareness for CPU/GPU execution
 - support for differentiable operations used in model training
 
 ### Device abstraction
 
-The `Device` abstraction allows the library to reason about whether computation should happen on CPU or a GPU-like backend. This keeps the design simple while making it easier to experiment with accelerator-backed operations.
+The `Device` abstraction allows the library to reason about whether computation should happen on CPU or a GPU-like backend. This keeps the design simple while making it easier to experiment with accelerators and custom execution paths.
 
 ### OpenCL backend
 
-The OpenCL path uses PyOpenCL to move arrays to an accelerator, execute simple kernels, and support basic tensor operations. It is useful for experimentation and understanding how low-level device execution fits into a training loop.
+The OpenCL path uses PyOpenCL to move arrays to an accelerator, execute simple kernels, and support basic tensor operations. It is useful for experimentation and for understanding how low-level device execution fits into a training pipeline.
 
 ## Neural network utilities
 
@@ -200,7 +170,7 @@ The project includes a small set of regression-style loss implementations in `nn
 
 ### MSELoss
 
-Mean Squared Error:
+Mean squared error:
 
 ```python
 (predicted - target) ** 2
@@ -210,7 +180,7 @@ This computes the squared error across the prediction and is commonly used for r
 
 ### MAELoss
 
-Mean Absolute Error:
+Mean absolute error:
 
 ```python
 abs(predicted - target)
@@ -247,7 +217,7 @@ This is the simplest gradient-based optimizer and is useful for understanding th
 
 ### Adam
 
-Adam combines momentum and adaptive learning rates using first and second moment estimates. It is one of the most common modern optimizers and is useful when training neural networks more stably than plain SGD.
+Adam combines momentum and adaptive learning rates using first and second moment estimates. It is one of the most common modern optimizers and is useful for training neural networks more stably than plain SGD.
 
 ### Muon
 
