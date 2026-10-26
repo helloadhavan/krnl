@@ -1,120 +1,196 @@
+from __future__ import annotations
+
 import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
-from pyopencl import Program
 
-from .kernels import MATMUL_KERNEL, SIGMOID_KERNEL, ELEMENTWISE_KERNEL
+try:
+    import pyclblast
+except ImportError:
+    pyclblast = None
+
+from .kernels import (
+    ELEMENTWISE_KERNEL,
+    MATMUL_KERNEL,
+    TRANSPOSE_KERNEL,
+)
 
 
 def get_gpu_info():
-    platforms = cl.get_platforms()
-    gpu_info = []
+    """
+    Return information about all available OpenCL GPUs.
+    """
 
-    for platform in platforms:
-        devices = platform.get_devices(device_type=cl.device_type.GPU)
+    result = []
+
+    for platform in cl.get_platforms():
+        devices = platform.get_devices(
+            device_type=cl.device_type.GPU
+        )
+
         for device in devices:
-            info = {
-                "platform": platform.name,
-                "device": device.name,
-                "max_compute_units": device.max_compute_units,
-                "max_work_group_size": device.max_work_group_size,
-                "global_mem_size": device.global_mem_size,
-                "local_mem_size": device.local_mem_size,
-                "max_clock_frequency": device.max_clock_frequency,
-            }
-            gpu_info.append(info)
+            result.append(
+                {
+                    "platform": platform.name,
+                    "device": device.name,
+                    "max_compute_units": (
+                        device.max_compute_units
+                    ),
+                    "max_work_group_size": (
+                        device.max_work_group_size
+                    ),
+                    "global_mem_size": device.global_mem_size,
+                    "local_mem_size": device.local_mem_size,
+                    "max_clock_frequency": (
+                        device.max_clock_frequency
+                    ),
+                }
+            )
 
-    return gpu_info
+    return result
 
 
-class OpenCLBackend(object):
-    _instance = None
+class OpenCLBackend:
+    """
+    OpenCL backend.
+
+    GPUArray uses this class for memory allocation and
+    kernel execution.
+    """
+
+    _instances = {}
 
     @classmethod
-    def instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
+    def instance(cls, device_id=0):
+        if device_id not in cls._instances:
+            cls._instances[device_id] = cls(device_id)
 
-        return cls._instance
+        return cls._instances[device_id]
 
-    def __init__(self):
-        self.context = cl.create_some_context()
+    def __init__(self, device_id=0):
+        self.context, self.device = self._create_context(
+            device_id
+        )
+
         self.queue = cl.CommandQueue(self.context)
 
-        self.device = self.queue.device
-
-        self.elementwise_program = Program(
+        self.elementwise_program = cl.Program(
             self.context,
-            ELEMENTWISE_KERNEL
+            ELEMENTWISE_KERNEL,
         ).build()
 
-        self.matmul_program = Program(
+        self.matmul_program = cl.Program(
             self.context,
-            MATMUL_KERNEL
+            MATMUL_KERNEL,
         ).build()
 
-        self.sigmoid_program = Program(
+        self.transpose_program = cl.Program(
             self.context,
-            SIGMOID_KERNEL
+            TRANSPOSE_KERNEL,
         ).build()
+
+    @staticmethod
+    def _create_context(device_id):
+        platforms = cl.get_platforms()
+        devices = []
+
+        for platform in platforms:
+            devices.extend(
+                platform.get_devices(
+                    device_type=cl.device_type.GPU
+                )
+            )
+
+        if not devices:
+            raise RuntimeError(
+                "No OpenCL GPU was found."
+            )
+
+        if device_id < 0 or device_id >= len(devices):
+            raise ValueError(
+                f"Invalid GPU device_id={device_id}. "
+                f"Available GPUs: {len(devices)}."
+            )
+
+        device = devices[device_id]
+        context = cl.Context(devices=[device])
+
+        return context, device
 
     def upload(self, data):
-        """
-        Upload a NumPy array to the GPU.
-
-        The backend currently supports float32 tensors.
-        """
-        data = np.ascontiguousarray(data, dtype=np.float32)
+        data = np.asarray(data, dtype=np.float32)
+        data = np.ascontiguousarray(data)
 
         return cl_array.to_device(
             self.queue,
-            data
+            data,
         )
 
-    def _validate_binary_inputs(self, a, b):
-        """
-        Validate inputs for elementwise operations.
-        """
-        if not isinstance(a, cl_array.Array):
-            raise TypeError("a must be a pyopencl.array.Array")
+    def empty(self, shape):
+        return cl_array.empty(
+            self.queue,
+            shape,
+            dtype=np.float32,
+        )
 
-        if not isinstance(b, cl_array.Array):
-            raise TypeError("b must be a pyopencl.array.Array")
+    def zeros(self, shape):
+        return cl_array.zeros(
+            self.queue,
+            shape,
+            dtype=np.float32,
+        )
+
+    def ones(self, shape):
+        return cl_array.ones(
+            self.queue,
+            shape,
+            dtype=np.float32,
+        )
+
+    def _validate_array(self, value, name="value"):
+        if isinstance(value, GPUArray):
+            value = value.array
+
+        if not isinstance(value, cl_array.Array):
+            raise TypeError(
+                f"{name} must be a GPUArray or "
+                "pyopencl.array.Array"
+            )
+
+        if value.dtype != np.dtype(np.float32):
+            raise TypeError(
+                f"{name} must have dtype float32"
+            )
+
+        return value
+
+    def _validate_binary_inputs(self, a, b):
+        a = self._validate_array(a, "a")
+        b = self._validate_array(b, "b")
+
+        if a.queue.context != b.queue.context:
+            raise ValueError(
+                "Arrays must use the same OpenCL context."
+            )
 
         if a.shape != b.shape:
             raise ValueError(
-                f"Tensor shapes must match: {a.shape} != {b.shape}"
+                f"Shapes must match: {a.shape} != {b.shape}"
             )
 
-        if a.dtype != b.dtype:
-            raise TypeError(
-                f"Tensor dtypes must match: {a.dtype} != {b.dtype}"
-            )
+        return a, b
 
-        if a.dtype != np.dtype(np.float32):
-            raise TypeError(
-                "This OpenCL backend currently supports float32 only"
-            )
-
-    def _elementwise_global_size(self, n):
-        """
-        Return a one-dimensional launch size.
-
-        Exact sizing is valid because each kernel also checks i < n.
-        """
-        return (n,)
+    @staticmethod
+    def _global_size(size):
+        return (int(size),)
 
     def add(self, a, b):
-        """
-        Elementwise addition: a + b.
-        """
-        self._validate_binary_inputs(a, b)
-
+        a, b = self._validate_binary_inputs(a, b)
         out = cl_array.empty_like(a)
 
         self.elementwise_program.add_f32(
             self.queue,
-            self._elementwise_global_size(a.size),
+            self._global_size(a.size),
             None,
             a.data,
             b.data,
@@ -125,16 +201,12 @@ class OpenCLBackend(object):
         return out
 
     def sub(self, a, b):
-        """
-        Elementwise subtraction: a - b.
-        """
-        self._validate_binary_inputs(a, b)
-
+        a, b = self._validate_binary_inputs(a, b)
         out = cl_array.empty_like(a)
 
         self.elementwise_program.sub_f32(
             self.queue,
-            self._elementwise_global_size(a.size),
+            self._global_size(a.size),
             None,
             a.data,
             b.data,
@@ -145,16 +217,12 @@ class OpenCLBackend(object):
         return out
 
     def mul(self, a, b):
-        """
-        Elementwise multiplication: a * b.
-        """
-        self._validate_binary_inputs(a, b)
-
+        a, b = self._validate_binary_inputs(a, b)
         out = cl_array.empty_like(a)
 
         self.elementwise_program.mul_f32(
             self.queue,
-            self._elementwise_global_size(a.size),
+            self._global_size(a.size),
             None,
             a.data,
             b.data,
@@ -165,18 +233,12 @@ class OpenCLBackend(object):
         return out
 
     def div(self, a, b):
-        """
-        Elementwise division: a / b.
-
-        Division by zero follows the device's floating-point behavior.
-        """
-        self._validate_binary_inputs(a, b)
-
+        a, b = self._validate_binary_inputs(a, b)
         out = cl_array.empty_like(a)
 
         self.elementwise_program.div_f32(
             self.queue,
-            self._elementwise_global_size(a.size),
+            self._global_size(a.size),
             None,
             a.data,
             b.data,
@@ -186,145 +248,521 @@ class OpenCLBackend(object):
 
         return out
 
-    def matmul(self, a, b, tile_size=16):
-        """
-        Tiled matrix multiplication.
+    def neg(self, a):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
 
-        A has shape (M, K)
-        B has shape (K, N)
-        C has shape (M, N)
-        """
-        if not isinstance(a, cl_array.Array):
-            raise TypeError("a must be a pyopencl.array.Array")
-
-        if not isinstance(b, cl_array.Array):
-            raise TypeError("b must be a pyopencl.array.Array")
-
-        if a.ndim != 2 or b.ndim != 2:
-            raise ValueError(
-                "matmul requires two 2D tensors"
-            )
-
-        if a.dtype != np.dtype(np.float32):
-            raise TypeError("a must use float32")
-
-        if b.dtype != np.dtype(np.float32):
-            raise TypeError("b must use float32")
-
-        M, K = a.shape
-        K2, N = b.shape
-
-        if K != K2:
-            raise ValueError(
-                f"Incompatible shapes for matmul: "
-                f"{a.shape} and {b.shape}"
-            )
-
-        if not isinstance(tile_size, int):
-            raise TypeError("tile_size must be an integer")
-
-        if tile_size <= 0:
-            raise ValueError(
-                "tile_size must be greater than zero"
-            )
-
-        local_size = (
-            tile_size,
-            tile_size,
-        )
-
-        work_items_per_group = tile_size * tile_size
-
-        if work_items_per_group > self.device.max_work_group_size:
-            raise ValueError(
-                f"tile_size={tile_size} requires "
-                f"{work_items_per_group} work-items, but this device "
-                f"supports at most "
-                f"{self.device.max_work_group_size}"
-            )
-
-        float_size = np.dtype(np.float32).itemsize
-        tile_bytes = tile_size * tile_size * float_size
-
-        required_local_memory = 2 * tile_bytes
-
-        if required_local_memory > self.device.local_mem_size:
-            raise ValueError(
-                f"tile_size={tile_size} requires "
-                f"{required_local_memory} bytes of local memory, but "
-                f"the device provides only "
-                f"{self.device.local_mem_size} bytes"
-            )
-
-        out = cl_array.empty(
+        self.elementwise_program.neg_f32(
             self.queue,
-            (M, N),
-            dtype=np.float32
-        )
-
-
-        global_rows = (
-            (M + tile_size - 1) // tile_size
-        ) * tile_size
-
-        global_cols = (
-            (N + tile_size - 1) // tile_size
-        ) * tile_size
-
-        global_size = (
-            global_rows,
-            global_cols,
-        )
-
-        self.matmul_program.matmul_tiled_f32(
-            self.queue,
-            global_size,
-            local_size,
-
+            self._global_size(a.size),
+            None,
             a.data,
-            b.data,
             out.data,
-
-            np.uint32(M),
-            np.uint32(K),
-            np.uint32(N),
-
-            np.uint32(tile_size),
-
-            cl.LocalMemory(tile_bytes),
-            cl.LocalMemory(tile_bytes),
+            np.uint32(a.size),
         )
 
         return out
 
-    def __add__(self, a, b):
-        return self.add(a, b)
+    def abs(self, a):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
 
-    def __sub__(self, a, b):
-        return self.sub(a, b)
-
-    def __mul__(self, a, b):
-        return self.mul(a, b)
-
-    def __truediv__(self, a, b):
-        return self.div(a, b)
-
-    def __matmul__(self, a, b):
-        return self.matmul(a, b)
-
-    def sigmoid(self, input_array: cl_array.Array):
-        if not isinstance(input_array, cl_array.Array):
-            raise TypeError("sigmoid expects a pyopencl.array.Array")
-        if input_array.dtype != np.dtype(np.float32):
-            raise TypeError("sigmoid supports float32 arrays only")
-        output = cl_array.empty_like(input_array)
-        count = np.uint32(input_array.size)
-        self.sigmoid_program.sigmoid_f32(
-                                    self.queue,
-                                    (input_array.size,),
-                                    None,
-                                    input_array.data,
-                                    output.data,
-                                    count
+        self.elementwise_program.abs_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            out.data,
+            np.uint32(a.size),
         )
-        return output
+
+        return out
+
+    def power(self, a, exponent):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.pow_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            out.data,
+            np.float32(exponent),
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def relu(self, a):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.relu_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def sigmoid(self, a):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.sigmoid_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def fill(self, shape, value):
+        out = cl_array.empty(
+            self.queue,
+            shape,
+            dtype=np.float32,
+        )
+
+        self.elementwise_program.fill_f32(
+            self.queue,
+            self._global_size(out.size),
+            None,
+            out.data,
+            np.float32(value),
+            np.uint32(out.size),
+        )
+
+        return out
+
+    def add_row_bias(self, matrix, bias):
+        """
+        Add a vector bias to every row.
+
+        matrix shape: (rows, columns)
+        bias shape:   (columns,)
+        """
+
+        matrix = self._validate_array(matrix, "matrix")
+        bias = self._validate_array(bias, "bias")
+
+        if matrix.ndim != 2:
+            raise ValueError(
+                "matrix must be 2-dimensional"
+            )
+
+        if bias.ndim != 1:
+            raise ValueError(
+                "bias must be 1-dimensional"
+            )
+
+        rows, columns = matrix.shape
+
+        if bias.shape != (columns,):
+            raise ValueError(
+                f"Expected bias shape {(columns,)}, "
+                f"got {bias.shape}"
+            )
+
+        out = cl_array.empty_like(matrix)
+
+        self.elementwise_program.add_row_bias_f32(
+            self.queue,
+            self._global_size(matrix.size),
+            None,
+            matrix.data,
+            bias.data,
+            out.data,
+            np.uint32(rows),
+            np.uint32(columns),
+        )
+
+        return out
+
+    def sum_to_row(self, matrix):
+        """
+        Sum a matrix across rows.
+
+        Input:  (rows, columns)
+        Output: (columns,)
+        """
+
+        matrix = self._validate_array(matrix, "matrix")
+
+        if matrix.ndim != 2:
+            raise ValueError(
+                "matrix must be 2-dimensional"
+            )
+
+        rows, columns = matrix.shape
+
+        out = cl_array.empty(
+            self.queue,
+            (columns,),
+            dtype=np.float32,
+        )
+
+        self.elementwise_program.sum_to_row_f32(
+            self.queue,
+            (int(columns),),
+            None,
+            matrix.data,
+            out.data,
+            np.uint32(rows),
+            np.uint32(columns),
+        )
+
+        return out
+
+    def transpose(self, a):
+        """
+        Transpose a 2-D array into a contiguous GPU array.
+        """
+
+        a = self._validate_array(a)
+
+        if a.ndim != 2:
+            raise ValueError(
+                "transpose currently supports 2-D arrays only"
+            )
+
+        rows, columns = a.shape
+
+        out = cl_array.empty(
+            self.queue,
+            (columns, rows),
+            dtype=np.float32,
+        )
+
+        self.transpose_program.transpose_f32(
+            self.queue,
+            (int(rows), int(columns)),
+            None,
+            a.data,
+            out.data,
+            np.uint32(rows),
+            np.uint32(columns),
+        )
+
+        return out
+
+    def matmul(self, a, b):
+        """
+        Matrix multiplication.
+
+        Uses PyCLBlast when available. Otherwise it uses
+        the fallback OpenCL kernel.
+        """
+
+        a = self._validate_array(a, "a")
+        b = self._validate_array(b, "b")
+
+        if a.ndim != 2 or b.ndim != 2:
+            raise ValueError(
+                "matmul requires 2-D arrays"
+            )
+
+        if a.shape[1] != b.shape[0]:
+            raise ValueError(
+                f"Incompatible shapes: "
+                f"{a.shape} @ {b.shape}"
+            )
+
+        if a.queue.context != b.queue.context:
+            raise ValueError(
+                "Arrays must use the same OpenCL context."
+            )
+
+        m, k = a.shape
+        _, n = b.shape
+
+        # Ensure row-major contiguous arrays.
+        a = a.copy()
+        b = b.copy()
+
+        out = cl_array.empty(
+            self.queue,
+            (m, n),
+            dtype=np.float32,
+        )
+
+        if pyclblast is not None:
+            pyclblast.gemm(
+                self.queue,
+                m,
+                n,
+                k,
+                a,
+                b,
+                out,
+                a_ld=k,
+                b_ld=n,
+                c_ld=n,
+            )
+        else:
+            self.matmul_program.matmul_f32(
+                self.queue,
+                (int(m), int(n)),
+                None,
+                a.data,
+                b.data,
+                out.data,
+                np.uint32(m),
+                np.uint32(k),
+                np.uint32(n),
+            )
+
+        return out
+
+
+class GPUArray:
+    """
+    GPU-resident float32 array.
+
+    The underlying pyopencl.array.Array is available through
+    the .array property.
+    """
+
+    def __init__(self, data, backend=None):
+        self.backend = (
+            backend
+            if backend is not None
+            else OpenCLBackend.instance()
+        )
+
+        if isinstance(data, GPUArray):
+            self.array = data.array
+            return
+
+        if isinstance(data, cl_array.Array):
+            if data.dtype != np.dtype(np.float32):
+                raise TypeError(
+                    "GPUArray only supports float32"
+                )
+
+            self.array = data
+            return
+
+        self.array = self.backend.upload(data)
+
+    @classmethod
+    def empty(cls, shape, backend=None):
+        backend = backend or OpenCLBackend.instance()
+
+        return cls(
+            backend.empty(shape),
+            backend=backend,
+        )
+
+    @classmethod
+    def zeros(cls, shape, backend=None):
+        backend = backend or OpenCLBackend.instance()
+
+        return cls(
+            backend.zeros(shape),
+            backend=backend,
+        )
+
+    @classmethod
+    def ones(cls, shape, backend=None):
+        backend = backend or OpenCLBackend.instance()
+
+        return cls(
+            backend.ones(shape),
+            backend=backend,
+        )
+
+    @property
+    def data(self):
+        return self.array
+
+    @property
+    def shape(self):
+        return self.array.shape
+
+    @property
+    def ndim(self):
+        return self.array.ndim
+
+    @property
+    def size(self):
+        return self.array.size
+
+    @property
+    def dtype(self):
+        return self.array.dtype
+
+    @property
+    def queue(self):
+        return self.array.queue
+
+    @property
+    def context(self):
+        return self.array.queue.context
+
+    def get(self):
+        return self.array.get()
+
+    def wait(self):
+        self.queue.finish()
+        return self
+
+    def copy(self):
+        return GPUArray(
+            self.array.copy(),
+            backend=self.backend,
+        )
+
+    def _coerce(self, other):
+        if isinstance(other, GPUArray):
+            return other
+
+        if isinstance(other, cl_array.Array):
+            return GPUArray(
+                other,
+                backend=self.backend,
+            )
+
+        if np.isscalar(other):
+            other = np.full(
+                self.shape,
+                other,
+                dtype=np.float32,
+            )
+
+        return GPUArray(
+            other,
+            backend=self.backend,
+        )
+
+    def _binary(self, other, operation):
+        other = self._coerce(other)
+
+        if self.shape != other.shape:
+            raise ValueError(
+                f"GPUArray shapes must match: "
+                f"{self.shape} != {other.shape}"
+            )
+
+        if self.context != other.context:
+            raise ValueError(
+                "GPUArray objects use different contexts"
+            )
+
+        result = getattr(self.backend, operation)(
+            self.array,
+            other.array,
+        )
+
+        return GPUArray(
+            result,
+            backend=self.backend,
+        )
+
+    def __add__(self, other):
+        return self._binary(other, "add")
+
+    def __radd__(self, other):
+        return self + other
+
+    def __sub__(self, other):
+        return self._binary(other, "sub")
+
+    def __rsub__(self, other):
+        return self._coerce(other) - self
+
+    def __mul__(self, other):
+        return self._binary(other, "mul")
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __truediv__(self, other):
+        return self._binary(other, "div")
+
+    def __rtruediv__(self, other):
+        return self._coerce(other) / self
+
+    def __neg__(self):
+        return GPUArray(
+            self.backend.neg(self.array),
+            backend=self.backend,
+        )
+
+    def __abs__(self):
+        return GPUArray(
+            self.backend.abs(self.array),
+            backend=self.backend,
+        )
+
+    def __pow__(self, exponent):
+        return GPUArray(
+            self.backend.power(
+                self.array,
+                exponent,
+            ),
+            backend=self.backend,
+        )
+
+    def __matmul__(self, other):
+        other = self._coerce(other)
+
+        return GPUArray(
+            self.backend.matmul(
+                self.array,
+                other.array,
+            ),
+            backend=self.backend,
+        )
+
+    def transpose(self):
+        return GPUArray(
+            self.backend.transpose(self.array),
+            backend=self.backend,
+        )
+
+    @property
+    def T(self):
+        return self.transpose()
+
+    def reshape(self, shape):
+        return GPUArray(
+            self.array.reshape(shape),
+            backend=self.backend,
+        )
+
+    def sum(self):
+        return GPUArray(
+            cl_array.sum(self.array),
+            backend=self.backend,
+        )
+
+    def mean(self):
+        return self.sum() / float(self.size)
+
+    def sigmoid(self):
+        return GPUArray(
+            self.backend.sigmoid(self.array),
+            backend=self.backend,
+        )
+
+    def relu(self):
+        return GPUArray(
+            self.backend.relu(self.array),
+            backend=self.backend,
+        )
+
+    def __repr__(self):
+        return (
+            f"GPUArray("
+            f"shape={self.shape}, "
+            f"dtype={self.dtype}"
+            f")"
+        )
