@@ -27,23 +27,29 @@ class Tensor:
         self.grad = None
 
         if self.device.device == "GPU":
-            self.backend = OpenCLBackend.instance()
+            self.backend = OpenCLBackend.instance(
+                device_id=self.device.device_id
+            )
 
-        if isinstance(data, Tensor):
-            self.data = data.data
+            if isinstance(data, Tensor):
+                self.data = data.data
 
-        elif self.device.device == "CPU":
-            self.data = np.asarray(data, dtype=np.float32)
-
-        elif self.device.device == "GPU":
-            if isinstance(data, cl_array.Array):
+            elif isinstance(data, GPUArray):
                 self.data = data
-            else:
-                data = np.asarray(data, dtype=np.float32)
-                self.data = self.backend.upload(data)
 
+            else:
+                self.data = GPUArray(
+                    data,
+                    backend=self.backend,
+                )
+        elif self.device.device == "CPU":
+            self.backend = None
+            self.data = np.asarray(
+                data,
+                dtype=np.float32,
+            )
         else:
-            raise ValueError(f"Invalid device type: {self.device.device}")
+            raise TypeError("Non supported device")
 
         self._prev = set(_children)
         self._op = _op
