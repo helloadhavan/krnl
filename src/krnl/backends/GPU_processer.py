@@ -134,17 +134,35 @@ class OpenCLBackend:
         )
 
     def zeros(self, shape):
-        return cl_array.zeros(
+        out = cl_array.empty(
             self.queue,
             shape,
             dtype=np.float32,
         )
 
+        self.elementwise_program.fill_f32(
+            self.queue,
+            self._global_size(out.size),
+            None,
+            out.data,
+            np.float32(0),
+            np.uint32(out.size),
+        )
+
     def ones(self, shape):
-        return cl_array.ones(
+        out = cl_array.empty(
             self.queue,
             shape,
             dtype=np.float32,
+        )
+
+        self.elementwise_program.fill_f32(
+            self.queue,
+            self._global_size(out.size),
+            None,
+            out.data,
+            np.float32(1),
+            np.uint32(out.size),
         )
 
     def _validate_array(self, value, name="value"):
