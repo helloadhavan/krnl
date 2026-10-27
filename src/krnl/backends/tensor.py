@@ -240,8 +240,7 @@ class Tensor:
         if self.device.device == "CPU":
             self.grad = np.ones_like(self.data, dtype=np.float32)
         else:
-            self.grad = cl_array.ones_like(self.data, dtype=np.float32)
-
+            self.grad = GPUArray.ones(self.data)
         for tensor in reversed(topo):
             tensor._backward()
 
@@ -360,6 +359,28 @@ class Tensor:
             )
         else:
             raise TypeError("Non supported device")
+
+    def reshape(self, shape):
+        if self.device.device == "GPU":
+            data = self.data.reshape(shape)
+        else:
+            data = self.data.reshape(shape)
+
+        out = Tensor(
+            data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="reshape",
+        )
+
+        def _backward():
+            if self.requires_grad and out.grad is not None:
+                grad = out.grad.reshape(self.data.shape)
+                self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
 
 
     def _is_gpu(self):
