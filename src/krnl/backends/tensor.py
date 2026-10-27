@@ -94,7 +94,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.backend.add(self, other.data) if self.device.device == "GPU" else self.data + other.data,
+            self.backend.add(self.data, other.data) if self.device.device == "GPU" else self.data + other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -120,7 +120,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.backend.sub(self, other.data) if self.device.device == "GPU" else self.data - other.data,
+            self.backend.sub(self.data, other.data) if self.device.device == "GPU" else self.data - other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -148,7 +148,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.backend.mul(self, other.data) if self.device.device == "GPU" else self.data * other.data,
+            self.backend.mul(self.data, other.data) if self.device.device == "GPU" else self.data * other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
@@ -176,7 +176,7 @@ class Tensor:
         other = self._ensure_tensor(other)
 
         out = Tensor(
-            self.backend.matmul(self, other.data) if self.device.device == "GPU" else self.data @ other.data,
+            self.backend.matmul(self.data, other.data) if self.device.device == "GPU" else self.data @ other.data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
