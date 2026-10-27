@@ -240,7 +240,10 @@ class Tensor:
         if self.device.device == "CPU":
             self.grad = np.ones_like(self.data, dtype=np.float32)
         else:
-            self.grad = GPUArray.ones(self.data)
+            self.grad = GPUArray.ones(
+                self.data.shape,
+                backend=self.backend,
+            )
         for tensor in reversed(topo):
             tensor._backward()
 
