@@ -336,6 +336,32 @@ class Tensor:
     def T(self):
         return self.data.T
 
+    def to(self, device: Device):
+        self.device = device
+        if device.device == "GPU":
+            self.backend = OpenCLBackend.instance(
+                device_id=self.device.device_id
+            )
+            if isinstance(self.data, GPUArray):
+                pass
+            else:
+                self.data = GPUArray(
+                    self.data,
+                    backend=self.backend,
+                )
+        elif device.device == "CPU":
+            self.backend = None
+            if isinstance(self.data, GPUArray):
+                self.data = self.data.array
+
+            self.data = np.asarray(
+                self.data,
+                dtype=np.float32,
+            )
+        else:
+            raise TypeError("Non supported device")
+
+
     def _is_gpu(self):
         return self.device.device == "GPU"
 
