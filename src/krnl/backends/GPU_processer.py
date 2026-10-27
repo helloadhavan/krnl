@@ -13,6 +13,7 @@ from .kernels import (
     ELEMENTWISE_KERNEL,
     MATMUL_KERNEL,
     TRANSPOSE_KERNEL,
+    ELEMENTWISE_SCALER_KERNELS
 )
 
 
@@ -87,6 +88,11 @@ class OpenCLBackend:
         self.transpose_program = cl.Program(
             self.context,
             TRANSPOSE_KERNEL,
+        ).build()
+
+        self.elementwise_scaler_program = cl.Program(
+            self.context,
+            ELEMENTWISE_SCALER_KERNELS
         ).build()
 
     @staticmethod
@@ -329,6 +335,22 @@ class OpenCLBackend:
 
         return out
 
+    def add_scalar(self, a, scalar):
+        a = self._validate_array(a, "a")
+
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.mul_scalar_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            np.float32(scalar),
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
 
     def relu(self, a):
         a = self._validate_array(a)

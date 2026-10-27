@@ -122,7 +122,6 @@ __kernel void relu_f32(
     }
 }
 
-
 __kernel void relu_backward_f32(
     __global const float *input,
     __global const float *gradient,
