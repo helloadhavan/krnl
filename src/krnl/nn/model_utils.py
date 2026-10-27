@@ -49,10 +49,24 @@ class Linear(Module):
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
             raise TypeError("Input must be a Tensor.")
-        if x.data.shape[-1] != self.in_features:
-            raise ValueError(f"Expected input with {self.in_features} features, got {x.data.shape[-1]}.")
 
-        return x * self._parameters["weight"] + self._parameters["bias"] if self.bias else x * self._parameters["weight"]
+        if x.data.shape[-1] != self.in_features:
+            raise ValueError(
+                f"Expected input with {self.in_features} features, "
+                f"got {x.data.shape[-1]}."
+            )
+
+        output = x * self._parameters["weight"]
+
+        if self.bias:
+            bias = self._parameters["bias"]
+
+            if len(bias.data.shape) == 1 and len(output.data.shape) == 2:
+                bias = bias.reshape((1, self.out_features))
+
+            output = output + bias
+
+        return output
 
 
 class ReLU(Module):
