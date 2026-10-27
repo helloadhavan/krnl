@@ -725,7 +725,7 @@ class GPUArray:
         )
 
     def __add__(self, other):
-        return self._binary(other, "add")
+        return self._binary(other, "add") if not np.isscalar(other) else self._binary(other, "add_scaler")
 
     def __radd__(self, other):
         return self + other
@@ -737,7 +737,7 @@ class GPUArray:
         return self._coerce(other) - self
 
     def __mul__(self, other):
-        return self._binary(other, "mul")
+        return self._binary(other, "mul") if not np.isscalar(other) else self._binary(other, "mul_scaler")
 
     def __rmul__(self, other):
         return self * other
