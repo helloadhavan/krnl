@@ -178,7 +178,7 @@ class OpenCLBackend:
         if not isinstance(value, cl_array.Array):
             raise TypeError(
                 f"{name} must be a GPUArray or "
-                "pyopencl.array.Array"
+                f"pyopencl.array.Array got {type(value)}"
             )
 
         if value.dtype != np.dtype(np.float32):
