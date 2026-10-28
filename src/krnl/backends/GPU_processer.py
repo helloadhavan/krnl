@@ -13,6 +13,7 @@ from .kernels import (
     ELEMENTWISE_KERNEL,
     MATMUL_KERNEL,
     TRANSPOSE_KERNEL,
+    ELEMENTWISE_SCALER_KERNELS
 )
 
 
@@ -87,6 +88,11 @@ class OpenCLBackend:
         self.transpose_program = cl.Program(
             self.context,
             TRANSPOSE_KERNEL,
+        ).build()
+
+        self.elementwise_scaler_program = cl.Program(
+            self.context,
+            ELEMENTWISE_SCALER_KERNELS
         ).build()
 
     @staticmethod
@@ -172,7 +178,7 @@ class OpenCLBackend:
         if not isinstance(value, cl_array.Array):
             raise TypeError(
                 f"{name} must be a GPUArray or "
-                "pyopencl.array.Array"
+                f"pyopencl.array.Array got {type(value)}"
             )
 
         if value.dtype != np.dtype(np.float32):
@@ -307,6 +313,40 @@ class OpenCLBackend:
             a.data,
             out.data,
             np.float32(exponent),
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def mul_scalar(self, a, scalar):
+        a = self._validate_array(a, "a")
+
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.mul_scalar_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            np.float32(scalar),
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def add_scalar(self, a, scalar):
+        a = self._validate_array(a, "a")
+
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.mul_scalar_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            np.float32(scalar),
+            out.data,
             np.uint32(a.size),
         )
 
@@ -685,7 +725,7 @@ class GPUArray:
         )
 
     def __add__(self, other):
-        return self._binary(other, "add")
+        return self._binary(other, "add") if not np.isscalar(other) else self._binary(other, "add_scaler")
 
     def __radd__(self, other):
         return self + other
@@ -697,7 +737,7 @@ class GPUArray:
         return self._coerce(other) - self
 
     def __mul__(self, other):
-        return self._binary(other, "mul")
+        return self._binary(other, "mul") if not np.isscalar(other) else self._binary(other, "mul_scaler")
 
     def __rmul__(self, other):
         return self * other
