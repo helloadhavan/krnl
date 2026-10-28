@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "krnl"
-version = "0.1.1.post1"
+version = "0.2.1"
 description = "A lightweight educational tensor and automatic differentiation library with CPU and OpenCL GPU support"
 readme = "README.md"
 requires-python = ">=3.11"
