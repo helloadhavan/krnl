@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numbers
 import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
@@ -610,6 +611,15 @@ class GPUArray:
 
         self.array = self.backend.upload(data)
 
+    def _coerce_operand(self, other):
+        if isinstance(other, GPUArray):
+            return other.array
+
+        if isinstance(other, cl_array.Array):
+            return other
+
+        return other
+
     @classmethod
     def empty(cls, shape, backend=None):
         backend = backend or OpenCLBackend.instance()
@@ -626,6 +636,13 @@ class GPUArray:
         return cls(
             backend.zeros(shape),
             backend=backend,
+        )
+
+    @staticmethod
+    def _is_scalar_operand(value):
+        return (
+                isinstance(value, numbers.Number)
+                or isinstance(value, np.generic)
         )
 
     @classmethod
@@ -725,28 +742,53 @@ class GPUArray:
         )
 
     def __add__(self, other):
-        return self._binary(other, "add") if not np.isscalar(other) else self._binary(other, "add_scalar")
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._binary(other, "add_scalar")
+
+        return self._binary(other, "add")
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, other):
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._binary(other, "sub_scalar")
+
         return self._binary(other, "sub")
 
     def __rsub__(self, other):
-        return self._coerce(other) - self
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._binary(other, "rsub_scalar")
+
+        return self._binary(other, "sub")
 
     def __mul__(self, other):
-        return self._binary(other, "mul") if not np.isscalar(other) else self._binary(other, "mul_scalar")
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._binary(other, "mul_scalar")
+
+        return self._binary(other, "mul")
 
     def __rmul__(self, other):
         return self * other
 
     def __truediv__(self, other):
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._binary(other, "div_scalar")
+
         return self._binary(other, "div")
 
     def __rtruediv__(self, other):
-        return self._coerce(other) / self
+        return self._coerce_operand(other) / self
 
     def __neg__(self):
         return GPUArray(
