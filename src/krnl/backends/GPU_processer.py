@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numbers
 import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
@@ -155,6 +156,8 @@ class OpenCLBackend:
             np.uint32(out.size),
         )
 
+        return out
+
     def ones(self, shape):
         out = cl_array.empty(
             self.queue,
@@ -170,6 +173,8 @@ class OpenCLBackend:
             np.float32(1),
             np.uint32(out.size),
         )
+
+        return out
 
     def _validate_array(self, value, name="value"):
         if isinstance(value, GPUArray):
@@ -340,7 +345,41 @@ class OpenCLBackend:
 
         out = cl_array.empty_like(a)
 
-        self.elementwise_program.mul_scalar_f32(
+        self.elementwise_scaler_program.add_scalar_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            np.float32(scalar),
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def sub_scalar(self, a, scalar):
+        a = self._validate_array(a, "a")
+
+        out = cl_array.empty_like(a)
+
+        self.elementwise_scaler_program.sub_scalar_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            np.float32(scalar),
+            out.data,
+            np.uint32(a.size),
+        )
+
+        return out
+
+    def div_scalar(self, a, scalar):
+        a = self._validate_array(a, "a")
+
+        out = cl_array.empty_like(a)
+
+        self.elementwise_scaler_program.div_scalar_f32(
             self.queue,
             self._global_size(a.size),
             None,
@@ -610,6 +649,15 @@ class GPUArray:
 
         self.array = self.backend.upload(data)
 
+    def _coerce_operand(self, other):
+        if isinstance(other, GPUArray):
+            return other.array
+
+        if isinstance(other, cl_array.Array):
+            return other
+
+        return other
+
     @classmethod
     def empty(cls, shape, backend=None):
         backend = backend or OpenCLBackend.instance()
@@ -626,6 +674,13 @@ class GPUArray:
         return cls(
             backend.zeros(shape),
             backend=backend,
+        )
+
+    @staticmethod
+    def _is_scalar_operand(value):
+        return (
+                isinstance(value, numbers.Number)
+                or isinstance(value, np.generic)
         )
 
     @classmethod
@@ -724,25 +779,53 @@ class GPUArray:
             backend=self.backend,
         )
 
+    def _scalar_op(self, scalar, operation):
+        """Call a backend scalar operation directly with the raw scalar."""
+        result = getattr(self.backend, operation)(
+            self.array,
+            scalar,
+        )
+        return GPUArray(result, backend=self.backend)
+
     def __add__(self, other):
-        return self._binary(other, "add") if not np.isscalar(other) else self._binary(other, "add_scaler")
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._scalar_op(other, "add_scalar")
+
+        return self._binary(other, "add")
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, other):
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._scalar_op(other, "sub_scalar")
+
         return self._binary(other, "sub")
 
     def __rsub__(self, other):
-        return self._coerce(other) - self
+        return (-self) + other
 
     def __mul__(self, other):
-        return self._binary(other, "mul") if not np.isscalar(other) else self._binary(other, "mul_scaler")
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._scalar_op(other, "mul_scalar")
+
+        return self._binary(other, "mul")
 
     def __rmul__(self, other):
-        return self * other
+        return self.__mul__(other)
 
     def __truediv__(self, other):
+        other = self._coerce_operand(other)
+
+        if self._is_scalar_operand(other):
+            return self._scalar_op(other, "div_scalar")
+
         return self._binary(other, "div")
 
     def __rtruediv__(self, other):
@@ -760,14 +843,14 @@ class GPUArray:
             backend=self.backend,
         )
 
-    def __pow__(self, exponent):
-        return GPUArray(
-            self.backend.power(
-                self.array,
-                exponent,
-            ),
-            backend=self.backend,
-        )
+    def __pow__(self, power):
+        if not isinstance(power, numbers.Number):
+            raise TypeError(
+                f"Power must be a numeric scalar, got {type(power)!r}"
+            )
+
+        result = self.backend.power(self.array, np.float32(power))
+        return GPUArray(result, backend=self.backend)
 
     def __matmul__(self, other):
         other = self._coerce(other)
