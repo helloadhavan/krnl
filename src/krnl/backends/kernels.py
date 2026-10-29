@@ -263,6 +263,62 @@ __kernel void add_scalar_f32(
         out[i] = a[i] + scalar;
     }
 }
+
+__kernel void sub_scalar_f32(
+    __global const float *a,
+    const float scalar,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = a[i] - scalar;
+    }
+}
+
+__kernel void rsub_scalar_f32(
+    __global const float *a,
+    const float scalar,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = scalar - a[i];
+    }
+}
+
+__kernel void div_scalar_f32(
+    __global const float *a,
+    const float scalar,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = a[i] / scalar;
+    }
+}
+
+__kernel void rdiv_scalar_f32(
+    __global const float *a,
+    const float scalar,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = scalar / a[i];
+    }
+}
 """
 
 MATMUL_KERNEL = r"""
