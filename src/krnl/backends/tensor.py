@@ -78,6 +78,17 @@ class Tensor:
 
     @staticmethod
     def _reduce_broadcasted_gradient(grad, target_shape):
+        if isinstance(grad, GPUArray):
+            if grad.shape == target_shape:
+                return grad
+            host = np.asarray(grad.get(), dtype=np.float32)
+            while host.ndim > len(target_shape):
+                host = host.sum(axis=0)
+            for axis, size in enumerate(target_shape):
+                if size == 1:
+                    host = host.sum(axis=axis, keepdims=True)
+            return GPUArray(host, backend=grad.backend)
+
         while grad.ndim > len(target_shape):
             grad = grad.sum(axis=0)
 
