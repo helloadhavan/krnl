@@ -769,15 +769,27 @@ class GPUArray:
         return self._binary(other, "sub")
 
     def __mul__(self, other):
-        other = self._coerce_operand(other)
+        print(
+            "GPUArray.__mul__:",
+            "self =", type(self),
+            "other =", type(other),
+            "is GPUArray =", isinstance(other, GPUArray),
+            "is cl.Array =", isinstance(other, cl_array.Array),
+        )
 
-        if self._is_scalar_operand(other):
+        if isinstance(other, GPUArray):
+            return self._binary(other.array, "mul")
+
+        if isinstance(other, cl_array.Array):
+            return self._binary(other, "mul")
+
+        if isinstance(other, numbers.Number):
             return self._binary(other, "mul_scalar")
 
-        return self._binary(other, "mul")
+        raise TypeError(f"Unsupported operand type: {type(other)!r}")
 
     def __rmul__(self, other):
-        return self * other
+        return self.__mul__(other)
 
     def __truediv__(self, other):
         other = self._coerce_operand(other)
@@ -802,14 +814,14 @@ class GPUArray:
             backend=self.backend,
         )
 
-    def __pow__(self, exponent):
-        return GPUArray(
-            self.backend.power(
-                self.array,
-                exponent,
-            ),
-            backend=self.backend,
-        )
+    def __pow__(self, power):
+        if not isinstance(power, numbers.Number):
+            raise TypeError(
+                f"Power must be a numeric scalar, got {type(power)!r}"
+            )
+
+        result = self.backend.power(self.array, np.float32(power))
+        return GPUArray(result, backend=self.backend)
 
     def __matmul__(self, other):
         other = self._coerce(other)
