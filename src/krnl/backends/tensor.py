@@ -44,6 +44,8 @@ class Tensor:
                 )
         elif self.device.device == "CPU":
             self.backend = None
+            if isinstance(data, Tensor):
+                data = data.data
             self.data = np.asarray(
                 data,
                 dtype=np.float32,
