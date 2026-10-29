@@ -156,6 +156,8 @@ class OpenCLBackend:
             np.uint32(out.size),
         )
 
+        return out
+
     def ones(self, shape):
         out = cl_array.empty(
             self.queue,
@@ -171,6 +173,8 @@ class OpenCLBackend:
             np.float32(1),
             np.uint32(out.size),
         )
+
+        return out
 
     def _validate_array(self, value, name="value"):
         if isinstance(value, GPUArray):
