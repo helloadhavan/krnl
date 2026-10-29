@@ -56,7 +56,8 @@ class Linear(Module):
                 f"got {x.data.shape[-1]}."
             )
 
-        output = x * self._parameters["weight"]
+        weight = self._parameters["weight"]
+        output = x @ weight
 
         if self.bias:
             bias = self._parameters["bias"]
