@@ -900,6 +900,9 @@ class GPUArray:
             backend=self.backend,
         )
 
+    def tolist(self):
+        return self.array.get().tolist()
+
     def __repr__(self):
         return (
             f"GPUArray("

@@ -396,6 +396,13 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def tolist(self):
+        if self.device.device == "CPU":
+            return self.data.tolist()
+        elif self.device.device == "GPU":
+            return self.data.tolist()
+        else:
+            raise TypeError("Non supported device")
 
     def _is_gpu(self):
         return self.device.device == "GPU"
