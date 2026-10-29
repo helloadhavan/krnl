@@ -17,6 +17,9 @@ class Optimizer:
     def step(self):
         raise NotImplementedError("Optimizer subclasses must implement step().")
 
+    def get_state_dict(self) -> dict:
+        return {"parameters": self.param, "state": self.state}
+
 
 class SGD(Optimizer):
     def __init__(self, parameters, learning_rate=0.01):
