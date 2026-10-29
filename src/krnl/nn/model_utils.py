@@ -14,6 +14,7 @@ class Parameter(Tensor):
 class Module:
     def __init__(self):
         self._parameters = {}
+        self.states = {}
 
     def register_parameter(self, name: str, parameter: Parameter) -> None:
         if not isinstance(parameter, Parameter):
@@ -26,6 +27,9 @@ class Module:
     def zero_grad(self) -> None:
         for param in self._parameters.values():
             param.grad = None
+
+    def get_model_state_dict(self) -> dict:
+        return {"states": self.states, "parameters": self._parameters}
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
