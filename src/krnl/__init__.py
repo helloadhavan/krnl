@@ -1,6 +1,7 @@
 """krnl public package API."""
 
 from . import nn
+from .backends.save import save
 from .backends import (
     Device,
     OpenCLBackend,
@@ -25,7 +26,8 @@ __all__ = [
     "ones_like",
     "zeros_like",
     "full_like",
-    "rand",
     "rand_like",
+    "rand",
+    "save",
     "nn",
 ]
