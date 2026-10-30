@@ -2,8 +2,7 @@ site_name: krnl
 site_description: a simple ai/ml with autograd library built on numpy and openCL
 
 theme:
-  name: dracula
-  custom_dir: overrides
+  name: readthedocs
 
 extra_css:
   - stylesheets/extra.css
