@@ -1,14 +1,12 @@
 site_name: krnl
-site_description: Documentation for the krnl package
-site_author: krnl contributors
-site_url: https://krnl.readthedocs.io/
-
-repo_name: GitHub
-repo_url: https://github.com/helloadhavan/krnl
+site_description: a simple ai/ml with autograd library built on numpy and openCL
 
 theme:
-  name: material
-  language: en
+  name: dracula
+  custom_dir: overrides
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
