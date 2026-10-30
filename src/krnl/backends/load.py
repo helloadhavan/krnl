@@ -1,6 +1,5 @@
 import pickle
 import numpy as np
-from ..backends.tensor import Tensor
 from ..backends.device import Device
 from ..nn.model_utils import Parameter
 
