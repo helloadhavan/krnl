@@ -1,47 +1,42 @@
 /*
- * krnl documentation theme
- * Dracula-inspired, with a Zoo Code-style documentation layout
+ * krnl documentation override
+ * Dracula theme with a Zoo Code-style layout
  */
 
 /* -----------------------------
-   Color palette
+   Theme colors
 ------------------------------ */
 
 :root {
-  --krnl-bg: #0f111a;
-  --krnl-bg-secondary: #151925;
-  --krnl-sidebar: #11141f;
-  --krnl-surface: #1b1f2e;
-  --krnl-surface-light: #242a3b;
+  --black: #08090d;
+  --blackSecondary: #0d0f14;
+  --grey: #a7acb8;
+  --greySecondary: #2a2d35;
+  --greyTernary: #171a21;
 
-  --krnl-text: #d9e0ee;
-  --krnl-text-muted: #8b95aa;
-  --krnl-heading: #f5f7fb;
+  --white: #f5f7fb;
+  --purple: #bd93f9;
+  --pink: #ff79c6;
+  --cyan: #8be9fd;
+  --green: #50fa7b;
+  --yellow: #f1fa8c;
+  --red: #ff5555;
 
-  --krnl-blue: #8be9fd;
-  --krnl-blue-strong: #61dafb;
-  --krnl-purple: #bd93f9;
-  --krnl-pink: #ff79c6;
-  --krnl-green: #50fa7b;
-  --krnl-yellow: #f1fa8c;
-  --krnl-red: #ff5555;
-
-  --krnl-border: #2b3245;
-  --krnl-radius: 8px;
-  --krnl-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  --page-background: #08090d;
+  --sidebar-background: #0b0d12;
+  --content-background: #08090d;
+  --card-background: #171a21;
+  --border-color: #292d38;
 }
 
 /* -----------------------------
-   Global page styles
+   Global layout
 ------------------------------ */
 
 html,
 body {
-  background: var(--krnl-bg) !important;
-  color: var(--krnl-text) !important;
-}
-
-body {
+  background: var(--page-background) !important;
+  color: var(--white) !important;
   font-family:
     Inter,
     ui-sans-serif,
@@ -50,391 +45,379 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-
-  line-height: 1.7;
   font-size: 15px;
+  line-height: 1.7;
 }
 
-/* Main page background */
+/* The Dracula theme uses a sidebar/content layout. */
+body {
+  overflow-x: hidden;
+}
 
-.md-main,
-.md-content,
-.md-container,
-.wy-body-for-nav,
-.wy-nav-content {
-  background: var(--krnl-bg) !important;
+main {
+  background: var(--content-background) !important;
+}
+
+.content {
+  background: var(--content-background) !important;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Match the narrower, centered reading area in the reference screenshot. */
+.content article {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 3.5rem 3rem 6rem;
 }
 
 /* -----------------------------
-   Sidebar/navigation
+   Sidebar
 ------------------------------ */
 
-.md-sidebar,
-.wy-nav-side,
-nav.md-tabs {
-  background: var(--krnl-sidebar) !important;
+.sidebar {
+  background: var(--sidebar-background) !important;
+  border-right: 1px solid var(--border-color);
+  min-width: 285px;
+  max-width: 285px;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.md-sidebar {
-  border-right: 1px solid var(--krnl-border);
+.sidebar h1 {
+  color: var(--white) !important;
+  font-size: 1.65rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  margin: 0 0 2rem !important;
 }
 
-.md-nav__title {
-  color: var(--krnl-heading) !important;
-  font-weight: 700;
+.sidebar h1 a,
+.sidebar h1 a:hover {
+  color: var(--white) !important;
+  text-decoration: none;
 }
 
-.md-nav__link,
-.wy-menu-vertical a {
-  color: var(--krnl-text-muted) !important;
+/* Site name accent */
+.sidebar h1::before {
+  content: "◆";
+  color: var(--purple);
+  font-size: 0.9em;
+  margin-right: 0.55rem;
+}
+
+/* Remove the default Dracula logo spacing if no logo is configured. */
+.sidebar .logo {
+  margin-bottom: 1.5rem;
+  max-width: 170px;
+}
+
+/* Sidebar links */
+.sidebar ul {
+  padding-left: 0;
+}
+
+.sidebar ul li {
+  list-style: none;
+  margin: 0.15rem 0;
+}
+
+.sidebar ul li a {
+  border: 0 !important;
   border-radius: 6px;
+  color: var(--grey) !important;
+  display: block;
+  font-size: 0.92rem;
+  padding: 0.62rem 0.8rem !important;
   transition:
+    background 0.15s ease,
     color 0.15s ease,
-    background 0.15s ease;
+    transform 0.15s ease;
 }
 
-.md-nav__link:hover,
-.wy-menu-vertical a:hover {
-  color: var(--krnl-blue) !important;
-  background: rgba(139, 233, 253, 0.08);
+.sidebar ul li a:hover {
+  background: rgba(189, 147, 249, 0.1) !important;
+  color: var(--cyan) !important;
+  text-decoration: none;
+  transform: translateX(2px);
 }
 
-.md-nav__link--active,
-.wy-menu-vertical li.current > a {
-  color: var(--krnl-blue) !important;
-  background: rgba(189, 147, 249, 0.14) !important;
-  border-left: 3px solid var(--krnl-purple);
-  font-weight: 600;
+/* Nested navigation */
+.sidebar ul li > ul {
+  border-left: 1px solid var(--border-color);
+  margin: 0.2rem 0 0.7rem 0.8rem !important;
+  padding-left: 0.55rem;
 }
 
-/* Sidebar section headings */
+.sidebar ul li > ul li a {
+  font-size: 0.85rem;
+  padding: 0.42rem 0.7rem !important;
+}
 
-.md-nav__item--section > .md-nav__link,
-.wy-menu-vertical span {
-  color: var(--krnl-heading) !important;
-  font-weight: 700;
+/* Dropdown/menu buttons */
+.sidebar .btn-toggle {
+  color: var(--white) !important;
+  font-weight: 650;
+}
+
+.sidebar .btn-toggle:hover {
+  color: var(--purple) !important;
+  background: rgba(189, 147, 249, 0.1) !important;
 }
 
 /* -----------------------------
    Header
 ------------------------------ */
 
-.md-header,
-.wy-nav-top {
-  background: var(--krnl-sidebar) !important;
-  border-bottom: 1px solid var(--krnl-border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+header {
+  background: var(--page-background) !important;
+  border-bottom: 1px solid var(--border-color);
+  min-height: 72px;
+  padding: 0 2.5rem;
 }
 
-.md-header__title,
-.md-header__topic {
-  color: var(--krnl-heading) !important;
-  font-weight: 700;
+.site-name {
+  color: var(--white) !important;
+  font-size: 1.25rem !important;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
-.md-header__button {
-  color: var(--krnl-blue) !important;
+.site-name:hover {
+  color: var(--purple) !important;
+}
+
+/* Search container */
+.search-box {
+  margin: 0.8rem auto !important;
+  max-width: 520px;
+}
+
+.search-box input,
+.drac-input-search,
+input[type="search"] {
+  background: #11131a !important;
+  border: 1px solid #383d49 !important;
+  border-radius: 8px !important;
+  color: var(--white) !important;
+  min-height: 42px;
+  padding: 0.65rem 0.9rem;
+}
+
+.search-box input::placeholder,
+.drac-input-search::placeholder {
+  color: #737b8d !important;
+}
+
+.search-box input:focus,
+.drac-input-search:focus,
+input[type="search"]:focus {
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 3px rgba(189, 147, 249, 0.15) !important;
+  outline: 0;
 }
 
 /* -----------------------------
-   Main content
+   Typography
 ------------------------------ */
 
-.md-content__inner,
-.wy-nav-content {
-  max-width: 920px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.md-content__inner {
-  padding-top: 2.5rem;
-  padding-bottom: 4rem;
-}
-
-article,
-.rst-content {
-  color: var(--krnl-text);
-}
-
-/* Headings */
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--krnl-heading) !important;
-  font-weight: 700;
+article h1,
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
+  color: var(--white) !important;
+  font-weight: 750;
+  letter-spacing: -0.035em;
   line-height: 1.25;
-  letter-spacing: -0.015em;
 }
 
-h1 {
-  font-size: 2.35rem;
-  margin-bottom: 1.2rem;
+article h1 {
+  font-size: 2.7rem;
+  margin: 0 0 1.5rem !important;
 }
 
-h2 {
-  font-size: 1.65rem;
-  margin-top: 2.8rem;
-  padding-bottom: 0.45rem;
-  border-bottom: 1px solid var(--krnl-border);
+article h2 {
+  border-bottom: 1px solid var(--border-color);
+  font-size: 1.75rem;
+  margin-top: 3.5rem !important;
+  padding-bottom: 0.65rem;
 }
 
-h3 {
-  font-size: 1.25rem;
-  margin-top: 2rem;
+article h3 {
+  color: var(--purple) !important;
+  font-size: 1.3rem;
+  margin-top: 2.3rem !important;
 }
 
-h4 {
-  color: var(--krnl-purple) !important;
+article h4 {
+  color: var(--cyan) !important;
+  font-size: 1.05rem;
+}
+
+article p,
+article li {
+  color: #d0d4de;
+}
+
+article strong {
+  color: var(--white);
+  font-weight: 750;
 }
 
 /* -----------------------------
    Links
 ------------------------------ */
 
-a,
-.md-typeset a {
-  color: var(--krnl-blue) !important;
+article a,
+.content a {
+  color: var(--cyan) !important;
   text-decoration: none;
 }
 
-a:hover,
-.md-typeset a:hover {
-  color: var(--krnl-pink) !important;
+article a:hover,
+.content a:hover {
+  color: var(--pink) !important;
   text-decoration: underline;
 }
 
 /* -----------------------------
-   Search
+   Inline code and code blocks
 ------------------------------ */
 
-.md-search__form,
-input[type="search"],
-.wy-side-nav-search {
-  background: var(--krnl-surface) !important;
-  border: 1px solid var(--krnl-border);
-  border-radius: var(--krnl-radius);
+code {
+  background: #1c1f27 !important;
+  border: 1px solid #303541;
+  border-radius: 5px;
+  color: var(--pink) !important;
+  font-size: 0.9em;
+  padding: 0.15rem 0.4rem;
 }
 
-.md-search__input,
-input[type="search"] {
-  color: var(--krnl-text) !important;
+pre {
+  background: #11131a !important;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  margin: 1.5rem 0 !important;
+  overflow-x: auto;
+  padding: 1.15rem !important;
 }
 
-.md-search__input::placeholder,
-input[type="search"]::placeholder {
-  color: var(--krnl-text-muted) !important;
-}
-
-/* -----------------------------
-   Code blocks
------------------------------- */
-
-code,
-.md-typeset code,
-.rst-content code {
-  color: var(--krnl-pink) !important;
-  background: rgba(189, 147, 249, 0.12) !important;
-  border-radius: 4px;
-  padding: 0.15rem 0.35rem;
-}
-
-pre,
-.md-typeset pre,
-.highlight,
-.highlight pre {
-  background: #171925 !important;
-  border: 1px solid var(--krnl-border);
-  border-radius: var(--krnl-radius);
-  box-shadow: var(--krnl-shadow);
-}
-
-pre code,
-.highlight code {
-  color: #f8f8f2 !important;
+pre code {
   background: transparent !important;
   border: 0;
+  color: #f8f8f2 !important;
   padding: 0;
-}
-
-/* Syntax highlighting */
-
-.highlight .k,
-.highlight .kd,
-.highlight .kn {
-  color: var(--krnl-pink) !important;
-}
-
-.highlight .s,
-.highlight .s1,
-.highlight .s2 {
-  color: var(--krnl-green) !important;
-}
-
-.highlight .nf,
-.highlight .nc {
-  color: var(--krnl-blue) !important;
-}
-
-.highlight .c,
-.highlight .c1,
-.highlight .cm {
-  color: #6272a4 !important;
-  font-style: italic;
-}
-
-.highlight .mi,
-.highlight .mf {
-  color: var(--krnl-purple) !important;
-}
-
-/* -----------------------------
-   Admonitions/callouts
------------------------------- */
-
-.admonition,
-.md-typeset .admonition,
-.md-typeset details {
-  background: var(--krnl-surface) !important;
-  border: 1px solid var(--krnl-border);
-  border-left: 4px solid var(--krnl-purple);
-  border-radius: var(--krnl-radius);
-  box-shadow: none;
-}
-
-.admonition-title,
-.md-typeset summary {
-  background: rgba(189, 147, 249, 0.12) !important;
-  color: var(--krnl-heading) !important;
-}
-
-.admonition.note {
-  border-left-color: var(--krnl-blue);
-}
-
-.admonition.tip {
-  border-left-color: var(--krnl-green);
-}
-
-.admonition.warning {
-  border-left-color: var(--krnl-yellow);
-}
-
-.admonition.danger {
-  border-left-color: var(--krnl-red);
 }
 
 /* -----------------------------
    Tables
 ------------------------------ */
 
-table,
-.md-typeset table:not([class]) {
-  display: table;
-  width: 100%;
-  background: var(--krnl-surface);
-  border: 1px solid var(--krnl-border);
-  border-radius: var(--krnl-radius);
+table {
+  background: var(--card-background) !important;
+  border: 1px solid var(--border-color);
+  border-collapse: separate;
+  border-radius: 8px;
+  border-spacing: 0;
   overflow: hidden;
 }
 
 th {
-  background: var(--krnl-surface-light) !important;
-  color: var(--krnl-heading) !important;
+  background: #20242e !important;
+  color: var(--white) !important;
 }
 
 td,
 th {
-  border-color: var(--krnl-border) !important;
+  border-color: var(--border-color) !important;
   padding: 0.8rem 1rem !important;
 }
 
 tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 /* -----------------------------
-   Horizontal rules and blockquotes
+   Admonitions
 ------------------------------ */
+
+.admonition {
+  background: rgba(189, 147, 249, 0.09) !important;
+  border: 1px solid rgba(189, 147, 249, 0.35) !important;
+  border-left: 4px solid var(--purple) !important;
+  border-radius: 8px;
+  color: #dfe3ec;
+  margin: 1.5rem 0;
+  padding: 1rem 1.15rem;
+}
+
+.admonition-title {
+  color: var(--purple) !important;
+  font-weight: 750;
+}
+
+/* -----------------------------
+   Images and horizontal rules
+------------------------------ */
+
+article img {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
 
 hr {
   border: 0;
-  border-top: 1px solid var(--krnl-border);
+  border-top: 1px solid var(--border-color);
   margin: 2.5rem 0;
-}
-
-blockquote {
-  margin: 1.5rem 0;
-  padding: 0.8rem 1.2rem;
-  color: var(--krnl-text-muted);
-  background: var(--krnl-surface);
-  border-left: 4px solid var(--krnl-blue);
-  border-radius: 0 var(--krnl-radius) var(--krnl-radius) 0;
-}
-
-/* -----------------------------
-   Buttons
------------------------------- */
-
-button,
-.md-button,
-a.md-button {
-  border-radius: 6px !important;
-  font-weight: 600;
-}
-
-.md-button--primary,
-a.md-button--primary {
-  background: var(--krnl-purple) !important;
-  color: #171925 !important;
-  border-color: var(--krnl-purple) !important;
-}
-
-.md-button--primary:hover,
-a.md-button--primary:hover {
-  background: var(--krnl-pink) !important;
-  border-color: var(--krnl-pink) !important;
 }
 
 /* -----------------------------
    Footer
 ------------------------------ */
 
-.md-footer,
 footer {
-  background: var(--krnl-sidebar) !important;
-  border-top: 1px solid var(--krnl-border);
-  color: var(--krnl-text-muted);
+  background: var(--sidebar-background) !important;
+  border-top: 1px solid var(--border-color);
+  color: var(--grey) !important;
+  position: static !important;
+  padding: 1.5rem 2rem;
 }
 
 /* -----------------------------
    Mobile layout
 ------------------------------ */
 
-@media screen and (max-width: 768px) {
-  body {
-    font-size: 14px;
+@media (max-width: 991.98px) {
+  .sidebar {
+    min-width: 270px;
+    max-width: 270px;
+    padding: 1.4rem 1rem;
   }
 
-  .md-content__inner,
-  .wy-nav-content {
-    padding: 1.25rem;
+  .content article {
+    padding: 2.2rem 1.25rem 5rem;
   }
 
-  h1 {
-    font-size: 1.9rem;
+  header {
+    padding: 0 1rem;
   }
 
-  h2 {
-    font-size: 1.4rem;
+  .search-box {
+    max-width: 100%;
   }
 
-  pre {
-    overflow-x: auto;
-    border-radius: 6px;
+  article h1 {
+    font-size: 2.15rem;
+  }
+
+  article h2 {
+    font-size: 1.5rem;
   }
 }
