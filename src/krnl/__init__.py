@@ -2,6 +2,7 @@
 
 from . import nn
 from .backends.save import save
+from .backends.load import load
 from .backends import (
     Device,
     OpenCLBackend,
@@ -29,5 +30,6 @@ __all__ = [
     "rand_like",
     "rand",
     "save",
+    "load",
     "nn",
 ]
