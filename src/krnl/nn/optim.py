@@ -20,6 +20,10 @@ class Optimizer:
     def get_state_dict(self) -> dict:
         return {"parameters": self.param, "state": self.state}
 
+    def register_state_dict(self, dic: dict) -> None:
+        self.param = dic.get("parameters") or {}
+        self.state = dic.get("states") or {}
+
 
 class SGD(Optimizer):
     def __init__(self, parameters, learning_rate=0.01):
