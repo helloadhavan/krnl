@@ -1,0 +1,23 @@
+site_name: krnl
+site_description: Documentation for the krnl package
+site_author: krnl contributors
+site_url: https://krnl.readthedocs.io/
+
+repo_name: GitHub
+repo_url: https://github.com/helloadhavan/krnl
+
+theme:
+  name: material
+  language: en
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Tensor: tensor.md
+  - Neural Networks: nn.md
+  - Loss Functions: loss.md
+  - Optimizers: optimizers.md
+  - Devices: device.md
+  - OpenCL Backend: opencl_backend.md
+  - Saving and Loading: saving_loading.md
+  - API Reference: api_reference.md
