@@ -31,6 +31,10 @@ class Module:
     def get_model_state_dict(self) -> dict:
         return {"states": self.states, "parameters": self._parameters}
 
+    def register_state_dict(self, dic: dict) -> None:
+        self._parameters = dic.get("parameters") or {}
+        self.states = dic.get("states") or {}
+
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
 
