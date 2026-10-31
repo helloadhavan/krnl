@@ -5,7 +5,7 @@ theme:
   name: readthedocs
 
 extra_css:
-  - stylesheets/extra.css
+  - overrides/stylesheets/extra.css
 
 nav:
   - Home: index.md
