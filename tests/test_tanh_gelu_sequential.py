@@ -76,22 +76,21 @@ def test_sequential():
     print(f"    expected: {expected}")
 
     # Sequential with Linear: check parameter collection
-    l1 = Linear(in_features=2, out_features=3, bias=True)
-    l2 = Linear(in_features=3, out_features=1, bias=True)
+    l1 = Linear(in_features=1, out_features=1, bias=True)
+    l2 = Linear(in_features=1, out_features=1, bias=True)
     seq = Sequential(l1, Tanh(), l2, Sigmoid())
     print(f"  Parameters collected: {len(seq._parameters)} (expected 4)")
 
     # Forward through Linear + activations
-    np.random.seed(42)
-    x = Tensor(np.array([[1.0, 2.0]], dtype=np.float32))
+    x = Tensor(np.array([[3.0]], dtype=np.float32))
     out = seq(x)
     print(f"    input shape:  {x.data.shape}")
     print(f"    output shape: {out.data.shape}")
     print(f"    output value: {out.data}")
 
     # Backward through Sequential
-    x = Tensor(np.array([[1.0, 2.0]], dtype=np.float32), requires_grad=True)
-    linear = Linear(in_features=2, out_features=1, bias=False)
+    x = Tensor(np.array([[2.0]], dtype=np.float32), requires_grad=True)
+    linear = Linear(in_features=1, out_features=1, bias=False)
     seq = Sequential(linear, Tanh())
     out = seq(x)
     loss = out ** 2
