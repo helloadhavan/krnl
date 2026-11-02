@@ -91,6 +91,37 @@ class Sigmoid(Module):
             raise TypeError("Input must be a Tensor.")
         return x.sigmoid()
 
+class Tanh(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        # tanh(x) = 2 * sigmoid(2x) - 1
+        return (x * 2.0).sigmoid() * 2.0 - 1.0
+
+
+class GELU(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        # GELU sigmoid approximation: x * sigmoid(1.702 * x)
+        return x * (x * 1.702).sigmoid()
+
+
+class Sequential(Module):
+    def __init__(self, *layers):
+        super().__init__()
+        self._layers = list(layers)
+        for i, layer in enumerate(self._layers):
+            if isinstance(layer, Module):
+                for name, param in layer._parameters.items():
+                    self.register_parameter(f"layer_{i}_{name}", param)
+
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self._layers:
+            x = layer(x)
+        return x
+
+
 
 __all__ = [
     "Tensor",
@@ -99,4 +130,7 @@ __all__ = [
     "Linear",
     "ReLU",
     "Sigmoid",
+    "Tanh",
+    "GELU",
+    "Sequential",
 ]
