@@ -129,3 +129,75 @@ y = sigmoid(x)
 ```
 
 Supports backpropagation with the derivative `sigmoid(x) * (1 - sigmoid(x))`.
+
+## Tanh
+
+Elementwise hyperbolic tangent activation: `tanh(x) = 2 * sigmoid(2x) - 1`.
+
+Outputs are in the range `(-1, 1)`. Tanh is an odd function, meaning `tanh(-x) = -tanh(x)`.
+
+```python
+tanh = nn.Tanh()
+y = tanh(x)
+```
+
+Supports backpropagation with the derivative `1 - tanh(x)²`.
+
+## GELU
+
+Gaussian Error Linear Unit activation using the sigmoid approximation: `GELU(x) ≈ x * sigmoid(1.702 * x)`.
+
+GELU is a smooth, non-monotonic activation used in Transformers (BERT, GPT). Unlike ReLU, it allows small negative values to pass through, which can improve training dynamics.
+
+```python
+gelu = nn.GELU()
+y = gelu(x)
+```
+
+Supports backpropagation through the computation graph automatically.
+
+## Sequential
+
+A container that chains multiple layers and executes them in order. It automatically collects parameters from all child `Module` instances, making it easy to pass them to an optimizer.
+
+```python
+from krnl import nn
+
+model = nn.Sequential(
+    nn.Linear(4, 8, bias=True),
+    nn.ReLU(),
+    nn.Linear(8, 1, bias=True),
+    nn.Sigmoid(),
+)
+
+x = Tensor([[1.0, 2.0, 3.0, 4.0]])
+y = model(x)
+
+# All parameters are collected automatically
+optimizer = nn.optim.Adam(model._parameters.values())
+```
+
+### Constructor
+
+```python
+Sequential(*layers)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `*layers` | `Module` | Any number of `Module` instances to chain in order |
+
+### Parameter Collection
+
+`Sequential` iterates over its child layers at construction time. For each child that is a `Module`, it registers all of that child's parameters under the name `layer_{i}_{name}` (where `i` is the layer index and `name` is the parameter name within that layer).
+
+```python
+seq = nn.Sequential(
+    nn.Linear(2, 4, bias=True),   # layer_0_weight, layer_0_bias
+    nn.Tanh(),                     # no parameters
+    nn.Linear(4, 1, bias=True),   # layer_2_weight, layer_2_bias
+)
+
+print(list(seq._parameters.keys()))
+# ['layer_0_weight', 'layer_0_bias', 'layer_2_weight', 'layer_2_bias']
+```

@@ -38,6 +38,9 @@ from krnl import nn
 | `nn.Linear` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Fully connected layer: `y = x @ W + b` |
 | `nn.ReLU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Rectified Linear Unit activation |
 | `nn.Sigmoid` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Sigmoid activation |
+| `nn.Tanh` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Hyperbolic tangent activation |
+| `nn.GELU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Gaussian Error Linear Unit activation (sigmoid approx.) |
+| `nn.Sequential` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Container that chains layers in order |
 
 ### Loss Functions
 

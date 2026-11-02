@@ -394,8 +394,8 @@ code {
 
 .rst-content pre,
 .rst-content div[class^="highlight"] {
-  background: #111111 !important;
-  border: 1px solid var(--krnl-border) !important;
+  background: #2b2b2b !important;
+  border: 1px solid #3c3f41 !important;
   border-radius: 9px !important;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28) !important;
   margin: 26px 0 !important;
@@ -407,46 +407,126 @@ code {
 .rst-content div[class^="highlight"] code {
   background: transparent !important;
   border: 0 !important;
-  color: #f8f8f2 !important;
-  font-size: 14px !important;
+  color: #a9b7c6 !important;
+  font-family: "JetBrains Mono", Consolas, monospace !important;
+  font-size: 13.5px !important;
   line-height: 1.65 !important;
   padding: 0 !important;
 }
 
-/* Dracula-like syntax highlighting */
+/* JetBrains Darcula syntax highlighting */
+
+/* Keywords: if, for, class, def, import, return, etc. */
 .highlight .k,
 .highlight .kd,
 .highlight .kn,
 .highlight .kp,
-.highlight .kr {
-  color: var(--krnl-pink) !important;
+.highlight .kr,
+.highlight .kc {
+  color: #cc7832 !important;
+  font-weight: 700 !important;
 }
 
+/* Keyword type (None, True, False, built-in types) */
+.highlight .kt,
+.highlight .nb,
+.highlight .bp {
+  color: #cc7832 !important;
+}
+
+/* Strings */
 .highlight .s,
 .highlight .s1,
 .highlight .s2,
 .highlight .sa,
-.highlight .sb {
-  color: var(--krnl-green) !important;
+.highlight .sb,
+.highlight .sc,
+.highlight .sd,
+.highlight .se,
+.highlight .sh,
+.highlight .si,
+.highlight .sx,
+.highlight .sr,
+.highlight .ss {
+  color: #6a8759 !important;
 }
 
+/* Function and class names (definitions) */
 .highlight .nf,
-.highlight .nc,
-.highlight .nd {
-  color: var(--krnl-blue-light) !important;
+.highlight .fm {
+  color: #ffc66d !important;
 }
 
+/* Class names */
+.highlight .nc {
+  color: #a9b7c6 !important;
+}
+
+/* Decorators */
+.highlight .nd {
+  color: #bbb529 !important;
+}
+
+/* Numbers */
 .highlight .mi,
 .highlight .mf,
-.highlight .mh {
-  color: var(--krnl-purple) !important;
+.highlight .mh,
+.highlight .mo,
+.highlight .mb,
+.highlight .il {
+  color: #6897bb !important;
 }
 
+/* Comments */
 .highlight .c,
 .highlight .c1,
-.highlight .cm {
-  color: #6272a4 !important;
+.highlight .cm,
+.highlight .cs,
+.highlight .ch,
+.highlight .cpf {
+  color: #808080 !important;
   font-style: italic;
+}
+
+/* Operators and punctuation */
+.highlight .o,
+.highlight .ow {
+  color: #a9b7c6 !important;
+}
+
+/* Variable names / identifiers */
+.highlight .n,
+.highlight .na,
+.highlight .ni,
+.highlight .ne,
+.highlight .nv {
+  color: #a9b7c6 !important;
+}
+
+/* Self / cls parameter */
+.highlight .bp {
+  color: #94558d !important;
+}
+
+/* Module / namespace names in imports */
+.highlight .nn {
+  color: #a9b7c6 !important;
+}
+
+/* Preprocessor / special */
+.highlight .cp {
+  color: #bbb529 !important;
+}
+
+/* Generic text inside code blocks */
+.highlight .gd {
+  color: #a9b7c6 !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+}
+
+.highlight .gi {
+  color: #a9b7c6 !important;
+  background: rgba(0, 255, 0, 0.1) !important;
 }
 
 /* ---------------------------------------------------------
