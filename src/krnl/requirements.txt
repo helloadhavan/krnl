@@ -17,7 +17,6 @@ jaraco.context==6.1.2
 jaraco.functools==4.6.0
 jeepney==0.9.0
 keyring==25.7.0
--e git+ssh://git@github.com/helloadhavan/krnl.git@2a0e93c536083e19ea514ca1b633b4d094e0a1a7#egg=krnl
 Mako==1.4.3
 markdown-it-py==4.2.0
 MarkupSafe==3.0.4
