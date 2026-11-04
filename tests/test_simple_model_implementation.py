@@ -1,4 +1,4 @@
-from src.krnl.backends import tensor
+from krnl.backends import tensor
 from random import randint
 
 dx = tensor.Tensor(randint(1, 10))
