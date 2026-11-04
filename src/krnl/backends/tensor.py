@@ -188,22 +188,40 @@ class Tensor:
     def __matmul__(self, other):
         other = self._ensure_tensor(other)
 
+        if self.device.device == "GPU":
+            result_data = self.backend.matmul(self.data, other.data)
+        else:
+            result_data = self.data @ other.data
+
         out = Tensor(
-            self.backend.matmul(self.data, other.data) if self.device.device == "GPU" else self.data @ other.data,
+            result_data,
             device=self.device,
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
-            _op="*",
+            _op="@",
         )
 
         def _backward():
+            if self.device.device == "GPU":
+                other_T = self.backend.transpose(other.data)
+                self_T = self.backend.transpose(self.data)
+            else:
+                other_T = other.data.T
+                self_T = self.data.T
+
             if self.requires_grad:
-                grad = out.grad @ other.data.T
+                if self.device.device == "GPU":
+                    grad = self.backend.matmul(out.grad, other_T)
+                else:
+                    grad = out.grad @ other_T
                 grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
                 self._accumulate_grad(self, grad)
 
             if other.requires_grad:
-                grad = out.grad @ self.data.T
+                if self.device.device == "GPU":
+                    grad = self.backend.matmul(self_T, out.grad)
+                else:
+                    grad = self_T @ out.grad
                 grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
                 self._accumulate_grad(other, grad)
 
@@ -349,7 +367,29 @@ class Tensor:
 
     @property
     def T(self):
-        return self.data.T
+        if self.device.device == "GPU":
+            transposed = self.backend.transpose(self.data)
+        else:
+            transposed = np.ascontiguousarray(self.data.T)
+
+        out = Tensor(
+            transposed,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="T",
+        )
+
+        def _backward():
+            if self.requires_grad and out.grad is not None:
+                if self.device.device == "GPU":
+                    grad = self.backend.transpose(out.grad)
+                else:
+                    grad = np.ascontiguousarray(out.grad.T)
+                self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
 
     def to(self, device: Device):
         self.device = device
@@ -397,6 +437,38 @@ class Tensor:
 
         out._backward = _backward
         return out
+
+    def sum(self):
+        if self.device.device == "GPU":
+            sum_data = self.data.sum()
+        else:
+            sum_data = np.array(self.data.sum(), dtype=np.float32)
+
+        out = Tensor(
+            sum_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="sum",
+        )
+
+        def _backward():
+            if self.requires_grad and out.grad is not None:
+                if self.device.device == "GPU":
+                    grad = GPUArray(
+                        np.full(self.data.shape, out.grad.get().item(), dtype=np.float32),
+                        backend=self.backend,
+                    )
+                else:
+                    grad = np.full(self.data.shape, out.grad.item(), dtype=np.float32)
+                self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
+
+    def mean(self):
+        n = self.data.size
+        return self.sum() * (1.0 / n)
 
     def tolist(self):
         if self.device.device == "CPU":
