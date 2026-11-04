@@ -203,15 +203,15 @@ class Tensor:
 
         def _backward():
             if self.device.device == "GPU":
-                other_T = self.backend.transpose(other.data)
-                self_T = self.backend.transpose(self.data)
+                other_T = GPUArray(self.backend.transpose(other.data), backend=self.backend)
+                self_T = GPUArray(self.backend.transpose(self.data), backend=self.backend)
             else:
                 other_T = other.data.T
                 self_T = self.data.T
 
             if self.requires_grad:
                 if self.device.device == "GPU":
-                    grad = self.backend.matmul(out.grad, other_T)
+                    grad = GPUArray(self.backend.matmul(out.grad, other_T), backend=self.backend)
                 else:
                     grad = out.grad @ other_T
                 grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
@@ -219,7 +219,7 @@ class Tensor:
 
             if other.requires_grad:
                 if self.device.device == "GPU":
-                    grad = self.backend.matmul(self_T, out.grad)
+                    grad = GPUArray(self.backend.matmul(self_T, out.grad), backend=self.backend)
                 else:
                     grad = self_T @ out.grad
                 grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
