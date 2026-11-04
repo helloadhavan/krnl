@@ -65,7 +65,8 @@ class Linear(Module):
             )
 
         weight = self._parameters["weight"]
-        output = x @ weight
+        # weight shape is (out_features, in_features), transpose to (in_features, out_features)
+        output = x @ weight.T
 
         if self.bias:
             bias = self._parameters["bias"]
