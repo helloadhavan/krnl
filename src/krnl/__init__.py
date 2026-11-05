@@ -1,6 +1,7 @@
 """krnl public package API."""
 
 from . import nn
+from . import train
 from .backends.save import save
 from .backends.load import load
 from .backends import (
@@ -32,4 +33,5 @@ __all__ = [
     "save",
     "load",
     "nn",
+    "train",
 ]
