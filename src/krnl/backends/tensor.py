@@ -103,6 +103,10 @@ class Tensor:
     def zero_grad(self):
         self.grad = None
 
+    def detach(self, requires_grad=False):
+        """Return a new Tensor with the same data but disconnected from the computation graph."""
+        return Tensor(self.data, device=self.device, requires_grad=requires_grad)
+
     def __add__(self, other):
         other = self._ensure_tensor(other)
 
@@ -469,6 +473,14 @@ class Tensor:
     def mean(self):
         n = self.data.size
         return self.sum() * (1.0 / n)
+
+    def item(self):
+        """Return the value of a single-element tensor as a Python scalar."""
+        if self.data.size != 1:
+            raise ValueError("item() requires a single-element tensor")
+        if self.device.device == "GPU":
+            return float(self.data.get().item())
+        return float(self.data.item())
 
     def tolist(self):
         if self.device.device == "CPU":
