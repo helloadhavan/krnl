@@ -3,7 +3,7 @@ from krnl.nn.loss import BaseCriterion, MSELoss, MAELoss, HuberLoss
 
 optims = {
     "adam": Adam,
-    "sdg": SGD,
+    "sgd": SGD,
     "muon": Muon,
     "muon_adam": MuonAdam
 }
@@ -15,9 +15,24 @@ losses = {
 }
 
 class TrainerArguments:
-    def __init__(self, learning_rate: float | None=3e4, batch_size=32, num_epochs=10, optimizer: Optimizer | str = "Adam", loss_function: BaseCriterion | str ='cross_entropy'):
+    def __init__(
+        self,
+        learning_rate: float = 3e-4,
+        batch_size: int = 32,
+        num_epochs: int = 10,
+        optimizer: str = "adam",
+        loss_function: BaseCriterion | str = "mse",
+    ):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.num_epochs = num_epochs
-        self.optimizer = optimizer if isinstance(optimizer, Optimizer) else optims[optimizer.lower()](learning_rate)
+        self._optimizer_name = optimizer
         self.loss_function = loss_function if isinstance(loss_function, BaseCriterion) else losses[loss_function.lower()]()
+
+    def build_optimizer(self, parameters) -> Optimizer:
+        """Build the optimizer with model parameters. Must be called before training."""
+        if isinstance(self._optimizer_name, Optimizer):
+            return self._optimizer_name
+        optimizer_cls = optims[self._optimizer_name.lower()]
+        self.optimizer = optimizer_cls(parameters, learning_rate=self.learning_rate)
+        return self.optimizer
