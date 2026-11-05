@@ -15,7 +15,7 @@ losses = {
 }
 
 class TrainerArguments:
-    def __init__(self, learning_rate=0.001, batch_size=32, num_epochs=10, optimizer: Optimizer | str = "Adam", loss_function: BaseCriterion | str ='cross_entropy'):
+    def __init__(self, learning_rate: float | None=3e4, batch_size=32, num_epochs=10, optimizer: Optimizer | str = "Adam", loss_function: BaseCriterion | str ='cross_entropy'):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.num_epochs = num_epochs
