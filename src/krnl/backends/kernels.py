@@ -107,7 +107,7 @@ __kernel void pow_f32(
     }
 }
 
-__kernel void log(
+__kernel void log_f32(
     __global const float *a,
     __global float *out,
     const uint n
