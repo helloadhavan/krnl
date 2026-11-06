@@ -79,7 +79,6 @@ __kernel void neg_f32(
     }
 }
 
-
 __kernel void abs_f32(
     __global const float *a,
     __global float *out,
@@ -105,6 +104,19 @@ __kernel void pow_f32(
 
     if (i < n) {
         out[i] = pow(a[i], exponent);
+    }
+}
+
+__kernel void log(
+    __global const float *a,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = log(a[i]);
     }
 }
 
