@@ -323,6 +323,19 @@ class OpenCLBackend:
 
         return out
 
+    def log(self, a):
+        a = self._validate_array(a)
+        out = cl_array.empty_like(a)
+
+        self.elementwise_program.log_f32(
+            self.queue,
+            self._global_size(a.size),
+            None,
+            a.data,
+            out.data,
+            np.uint32(a.size),
+        )
+
     def mul_scalar(self, a, scalar):
         a = self._validate_array(a, "a")
 
