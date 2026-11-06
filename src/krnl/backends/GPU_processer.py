@@ -640,7 +640,7 @@ class GPUArray:
     the .array property.
     """
 
-    def __init__(self, data, backend=None):
+    def __init__(self, data, backend: OpenCLBackend |  None = None):
         self.backend = (
             backend
             if backend is not None
@@ -891,6 +891,9 @@ class GPUArray:
             self.array.reshape(shape),
             backend=self.backend,
         )
+
+    def log(self):
+        return GPUArray(self.backend.log(self.array))
 
     def sum(self):
         return GPUArray(
