@@ -348,6 +348,33 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def __neg__(self):
+        if self.device.device == "GPU":
+            neg_data = self.backend.neg(self.data)
+        else:
+            neg_data = -self.data
+
+        out = Tensor(
+            neg_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="neg",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            if self.device.device == "GPU":
+                grad = self.backend.neg(out.grad)
+            else:
+                grad = -out.grad
+            self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
+
     def __gt__(self, value):
         if not isinstance(value, Tensor):
             value = self._ensure_tensor(value)
