@@ -336,6 +336,8 @@ class OpenCLBackend:
             np.uint32(a.size),
         )
 
+        return out
+
     def mul_scalar(self, a, scalar):
         a = self._validate_array(a, "a")
 
