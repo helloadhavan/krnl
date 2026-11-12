@@ -328,6 +328,33 @@ class Tensor:
         out._backward = _backward
         return out
 
+_     def log(self):
+        if self.device.device == "GPU":
+            log_data = self.backend.log(self.data)
+        else:
+            log_data = np.log(self.data).astype(np.float32)
+
+        out = Tensor(
+            log_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="log",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            if self.device.device == "GPU":
+                grad = self.backend.div(out.grad, self.data)
+            else:
+                grad = out.grad / self.data
+            self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
+
     def __abs__(self):
         out = Tensor(
             np.abs(self.data),
@@ -497,18 +524,33 @@ class Tensor:
         out._backward = _backward
         return out
 
-    def clip(self, minv: Tensor, maxv: Tensor):
-        if not isinstance(minv, Tensor):
-            raise ValueError("minv must be a Tensor")
-        if not isinstance(maxv, Tensor):
-            raise ValueError("maxv must be a Tensor")
+tensor    def clip(self, minv, maxv):
+        minv = self._ensure_tensor(minv)
+        maxv = self._ensure_tensor(maxv)
 
-        if self > maxv:
-            return maxv
-        elif self < minv:
-            return minv
-        else:
-            return
+        clipped = np.clip(
+            self.data if self.device.device == "CPU" else self.data,
+            minv.data,
+            maxv.data,
+        )
+
+        out = Tensor(
+            clipped,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="clip",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+            mask = ((self.data >= minv.data) & (self.data <= maxv.data)).astype(np.float32)
+            grad = out.grad * mask
+            self._accumulate_grad(self, grad)
+
+        out._backward = _backward
+        return out
 
 
     def mean(self):
