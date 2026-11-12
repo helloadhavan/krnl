@@ -55,7 +55,9 @@ class HuberLoss(BaseCriterion):
         return self._reduce(quadratic)
 
 class CrossEntropy(BaseCriterion):
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: str = "mean", epsilon: float = 1e-15):
         super().__init__(reduction)
+        self.epsilon = epsilon
+
 
 __all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss"]
