@@ -328,7 +328,7 @@ class Tensor:
         out._backward = _backward
         return out
 
-_     def log(self):
+    def log(self):
         if self.device.device == "GPU":
             log_data = self.backend.log(self.data)
         else:
@@ -524,7 +524,7 @@ _     def log(self):
         out._backward = _backward
         return out
 
-tensor    def clip(self, minv, maxv):
+    def clip(self, minv, maxv):
         minv = self._ensure_tensor(minv)
         maxv = self._ensure_tensor(maxv)
 
