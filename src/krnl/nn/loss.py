@@ -59,7 +59,7 @@ class BCELoss(BaseCriterion):
         self.epsilon = epsilon
 
     def __call__(self, predicted: Tensor, target: Tensor) -> Tensor:
-        if predicted.data.shape != target.shape:
+        if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
         if predicted > ones_like(predicted) or predicted < zeros_like(predicted):
             raise ValueError("Predicted values must be in the range [0, 1].")
