@@ -470,6 +470,20 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def clip(self, minv: Tensor, maxv: Tensor):
+        if not isinstance(minv, Tensor):
+            raise ValueError("minv must be a Tensor")
+        if not isinstance(maxv, Tensor):
+            raise ValueError("maxv must be a Tensor")
+
+        if self > maxv:
+            return maxv
+        elif self < minv:
+            return minv
+        else:
+            return
+
+
     def mean(self):
         n = self.data.size
         return self.sum() * (1.0 / n)
