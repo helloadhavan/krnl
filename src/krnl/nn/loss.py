@@ -54,5 +54,8 @@ class HuberLoss(BaseCriterion):
         quadratic = error ** 2 * 0.5
         return self._reduce(quadratic)
 
+class CrossEntropy(BaseCriterion):
+    def __init__(self, reduction: str = "mean"):
+        super().__init__(reduction)
 
 __all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss"]
