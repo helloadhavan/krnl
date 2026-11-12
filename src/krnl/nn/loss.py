@@ -59,5 +59,14 @@ class BCELoss(BaseCriterion):
         super().__init__(reduction)
         self.epsilon = epsilon
 
+    def __call__(self, predicted: Tensor, target: Tensor) -> Tensor:
+        if predicted.data.shape != target.shape:
+            raise ValueError("Predicted and target tensors must have the same shape.")
+        if predicted > ones_like(predicted) or predicted < zeros_like(predicted):
+            raise ValueError("Predicted values must be in the range [0, 1].")
+        predicted = predicted.clip(full_like(predicted, self.epsilon), full_like(predicted, 1 - self.epsilon))
+        loss = - (target * predicted.log() + (1 - target) * (1 - predicted).log())
+        return self._reduce(loss)
+
 
 __all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss"]
