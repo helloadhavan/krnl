@@ -1,5 +1,5 @@
-from ..backends.tensor import Tensor
-
+from ..backends.tensor import Tensor, ones_like, zeros_like, full_like
+from ..nn.model_utils import
 
 class BaseCriterion:
     def __init__(self, reduction: str = "mean"):
@@ -54,7 +54,7 @@ class HuberLoss(BaseCriterion):
         quadratic = error ** 2 * 0.5
         return self._reduce(quadratic)
 
-class CrossEntropy(BaseCriterion):
+class BCELoss(BaseCriterion):
     def __init__(self, reduction: str = "mean", epsilon: float = 1e-15):
         super().__init__(reduction)
         self.epsilon = epsilon
