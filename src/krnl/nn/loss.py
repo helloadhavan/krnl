@@ -1,5 +1,4 @@
 from ..backends.tensor import Tensor, ones_like, zeros_like, full_like
-from ..nn.model_utils import
 
 class BaseCriterion:
     def __init__(self, reduction: str = "mean"):
@@ -69,4 +68,4 @@ class BCELoss(BaseCriterion):
         return self._reduce(loss)
 
 
-__all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss"]
+__all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss", "BCELoss"]
