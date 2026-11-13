@@ -108,6 +108,13 @@ class GELU(Module):
         return x * (x * 1.702).sigmoid()
 
 
+class Softmax(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        return x.softmax()
+
+
 class Sequential(Module):
     def __init__(self, *layers):
         super().__init__()
@@ -131,6 +138,7 @@ __all__ = [
     "Linear",
     "ReLU",
     "Sigmoid",
+    "Softmax",
     "Tanh",
     "GELU",
     "Sequential",
