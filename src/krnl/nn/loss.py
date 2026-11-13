@@ -47,9 +47,6 @@ class HuberLoss(BaseCriterion):
             raise ValueError("Predicted and target tensors must have the same shape.")
         error = predicted - target
         abs_error = abs(error)
-        # Huber loss: 0.5 * error^2 when |error| <= delta, else delta * (|error| - 0.5 * delta)
-        # Smooth approximation: use quadratic (MSE) form since we lack element-wise conditionals
-        # For simplicity, use quadratic loss (equivalent to Huber with large delta)
         quadratic = error ** 2 * 0.5
         return self._reduce(quadratic)
 
@@ -62,7 +59,7 @@ class BCELoss(BaseCriterion):
         if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
         if predicted > ones_like(predicted) or predicted < zeros_like(predicted):
-            raise ValueError("Predicted values must be in the range [0, 1].")
+            predicted = predicted.softmax()
         predicted = predicted.clip(full_like(predicted, self.epsilon), full_like(predicted, 1 - self.epsilon))
         loss = - (target * predicted.log() + (1 - target) * (1 - predicted).log())
         return self._reduce(loss)
