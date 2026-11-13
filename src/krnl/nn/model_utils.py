@@ -129,6 +129,13 @@ class Sequential(Module):
             x = layer(x)
         return x
 
+class Residual(Module):
+    def __init__(self, model: Module | Sequential):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x + self.model(x)
 
 
 __all__ = [
