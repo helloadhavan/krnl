@@ -122,6 +122,11 @@ class Softmax(Module):
             raise TypeError("Input must be a Tensor.")
         return x.softmax()
 
+class SiLU(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor")
+        raise x * x.sigmoid()
 
 class Sequential(Module):
     def __init__(self, *layers):
