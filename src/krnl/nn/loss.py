@@ -64,5 +64,18 @@ class BCELoss(BaseCriterion):
         loss = - (target * predicted.log() + (1 - target) * (1 - predicted).log())
         return self._reduce(loss)
 
+class CrossEntropy(BaseCriterion):
+    def __init__(self, reduction: str = "mean", epsilon: float = 1e-15):
+        super().__init__(reduction)
+        self.epsilon = epsilon
+
+    def __call__(self, predicted: Tensor, target: Tensor) -> Tensor:
+        if predicted.data.shape != target.data.shape:
+            raise ValueError("Predicted and target tensors must have the same shape.")
+        if predicted > ones_like(predicted) or predicted < zeros_like(predicted):
+            predicted = predicted.softmax()
+        predicted = predicted.clip(full_like(predicted, self.epsilon), full_like(predicted, 1 - self.epsilon))
+        sample_losses = - (target * predicted.log()).sum()
+        return self._reduce(sample_losses)
 
 __all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss", "BCELoss"]
