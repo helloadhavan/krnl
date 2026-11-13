@@ -14,7 +14,8 @@ from .kernels import (
     ELEMENTWISE_KERNEL,
     MATMUL_KERNEL,
     TRANSPOSE_KERNEL,
-    ELEMENTWISE_SCALER_KERNELS
+    ELEMENTWISE_SCALER_KERNELS,
+    SOFTMAX_KERNEL,
 )
 
 
@@ -94,6 +95,11 @@ class OpenCLBackend:
         self.elementwise_scaler_program = cl.Program(
             self.context,
             ELEMENTWISE_SCALER_KERNELS
+        ).build()
+
+        self.softmax_program = cl.Program(
+            self.context,
+            SOFTMAX_KERNEL,
         ).build()
 
     @staticmethod
@@ -529,6 +535,29 @@ class OpenCLBackend:
             out.data,
             np.uint32(rows),
             np.uint32(columns),
+        )
+
+        return out
+
+    def softmax(self, a):
+        a = self._validate_array(a)
+
+        if a.ndim != 2:
+            raise ValueError(
+                "softmax currently supports 2-D arrays only"
+            )
+
+        rows, cols = a.shape
+        out = cl_array.empty_like(a)
+
+        self.softmax_program.softmax_f32(
+            self.queue,
+            (int(rows),),
+            None,
+            a.data,
+            out.data,
+            np.uint32(rows),
+            np.uint32(cols),
         )
 
         return out
