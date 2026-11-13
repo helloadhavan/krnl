@@ -935,6 +935,12 @@ class GPUArray:
     def mean(self):
         return self.sum() / float(self.size)
 
+    def softmax(self):
+        return GPUArray(
+            self.backend.softmax(self.array),
+            backend=self.backend,
+        )
+
     def sigmoid(self):
         return GPUArray(
             self.backend.sigmoid(self.array),
