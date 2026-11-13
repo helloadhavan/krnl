@@ -328,6 +328,38 @@ class Tensor:
         out._backward = _backward
         return out
 
+    def softmax(self):
+        if self.data.ndim != 2:
+            raise ValueError("softmax currently supports 2-D tensors only")
+
+        if self.device.device == "GPU":
+            softmax_data = self.backend.softmax(self.data)
+        else:
+            # Numerically stable softmax: subtract max per row
+            shifted = self.data - self.data.max(axis=1, keepdims=True)
+            exp_data = np.exp(shifted)
+            softmax_data = (exp_data / exp_data.sum(axis=1, keepdims=True)).astype(np.float32)
+
+        out = Tensor(
+            softmax_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="softmax",
+        )
+
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            s = out.data
+            dot = (out.grad * s).sum(axis=1, keepdims=True)
+            grad = s * (out.grad - dot)
+            self._accumulate_grad(self, grad.astype(np.float32))
+
+        out._backward = _backward
+        return out
+
     def log(self):
         if self.device.device == "GPU":
             log_data = self.backend.log(self.data)
