@@ -12,9 +12,10 @@ class Parameter(Tensor):
 
 
 class Module:
-    def __init__(self):
+    def __init__(self, eval: bool = False):
         self._parameters = {}
         self.states = {}
+        self.eval = eval
 
     def register_parameter(self, name: str, parameter: Parameter) -> None:
         if not isinstance(parameter, Parameter):
@@ -34,6 +35,13 @@ class Module:
     def register_state_dict(self, dic: dict) -> None:
         self._parameters = dic.get("parameters") or {}
         self.states = dic.get("states") or {}
+
+    def train(self):
+        self.eval = False
+
+    def eval(self):
+        self.eval = True
+
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
