@@ -78,4 +78,4 @@ class CrossEntropy(BaseCriterion):
         sample_losses = - (target * predicted.log()).sum()
         return self._reduce(sample_losses)
 
-__all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss", "BCELoss"]
+__all__ = ["BaseCriterion", "MSELoss", "MAELoss", "HuberLoss", "BCELoss", "CrossEntropy"]
