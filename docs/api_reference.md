@@ -38,6 +38,7 @@ from krnl import nn
 | `nn.Linear` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Fully connected layer: `y = x @ W + b` |
 | `nn.ReLU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Rectified Linear Unit activation |
 | `nn.Sigmoid` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Sigmoid activation |
+| `nn.Softmax` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Row-wise softmax activation (2-D tensors) |
 | `nn.Tanh` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Hyperbolic tangent activation |
 | `nn.GELU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Gaussian Error Linear Unit activation (sigmoid approx.) |
 | `nn.Sequential` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Container that chains layers in order |
@@ -49,6 +50,7 @@ from krnl import nn
 | `nn.MSELoss` | [`loss.py`](../src/krnl/nn/loss.py) | Mean Squared Error |
 | `nn.MAELoss` | [`loss.py`](../src/krnl/nn/loss.py) | Mean Absolute Error |
 | `nn.HuberLoss` | [`loss.py`](../src/krnl/nn/loss.py) | Huber loss (smooth L1) |
+| `nn.BCELoss` | [`loss.py`](../src/krnl/nn/loss.py) | Binary Cross-Entropy loss |
 | `nn.loss.BaseCriterion` | [`loss.py`](../src/krnl/nn/loss.py) | Abstract base for custom losses |
 
 ### Optimizers
@@ -92,6 +94,13 @@ Tensor(data, device=None, requires_grad=False)
 | `.backward()` | `None` | Backpropagate gradients (scalar tensors only) |
 | `.relu()` | `Tensor` | Element-wise ReLU |
 | `.sigmoid()` | `Tensor` | Element-wise sigmoid |
+| `.softmax()` | `Tensor` | Row-wise softmax (2-D tensors only) |
+| `.log()` | `Tensor` | Element-wise natural logarithm |
+| `.sum()` | `Tensor` | Sum all elements (differentiable) |
+| `.mean()` | `Tensor` | Mean of all elements (differentiable) |
+| `.item()` | `float` | Extract Python scalar from single-element tensor |
+| `.clip(minv, maxv)` | `Tensor` | Clamp values element-wise (differentiable) |
+| `.detach(requires_grad=False)` | `Tensor` | Disconnect from computation graph |
 | `.reshape(shape)` | `Tensor` | Reshape (differentiable) |
 | `.to(device)` | `None` | Move tensor to device (in-place) |
 | `.tolist()` | `list` | Convert to Python list |
@@ -99,7 +108,7 @@ Tensor(data, device=None, requires_grad=False)
 
 ### Operators
 
-`+`, `-`, `*`, `@`, `**`, `abs()`, `>`, `<` — all with reverse variants where applicable.
+`+`, `-`, `*`, `@`, `**`, `-` (unary negation), `abs()`, `>`, `<` — all with reverse variants where applicable.
 
 ## Device
 
