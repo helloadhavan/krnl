@@ -42,7 +42,7 @@ Tensor(data, device=None, requires_grad=False, _children=(), _op="")
 |---|---|---|
 | `shape` | `tuple` | Shape of the underlying data |
 | `ndim` | `int` | Number of dimensions |
-| `T` | ndarray / GPUArray | Transposed data |
+| `T` | `Tensor` | Transposed tensor (differentiable) |
 | `data` | ndarray / GPUArray | Raw underlying data |
 | `grad` | ndarray / GPUArray / `None` | Accumulated gradient |
 
@@ -54,14 +54,45 @@ All arithmetic operations return a new `Tensor` and build the computation graph 
 |---|---|---|
 | Addition | `a + b` | Supports broadcasting |
 | Subtraction | `a - b` | Supports broadcasting |
+| Negation | `-a` | Unary negation |
 | Multiplication | `a * b` | Element-wise, supports broadcasting |
 | Matrix multiply | `a @ b` | Requires 2-D tensors |
 | Power | `a ** n` | `n` must be int or float |
 | Absolute value | `abs(a)` | Element-wise |
-| ReLU | `a.relu()` | `max(0, x)` element-wise |
-| Sigmoid | `a.sigmoid()` | `1 / (1 + exp(-x))` element-wise |
 
 All operations support reverse variants (`__radd__`, `__rsub__`, `__rmul__`) so scalars can appear on the left side.
+
+## Activation & Math Functions
+
+| Method | Description |
+|---|---|
+| `a.relu()` | `max(0, x)` element-wise |
+| `a.sigmoid()` | `1 / (1 + exp(-x))` element-wise |
+| `a.softmax()` | Row-wise softmax (requires 2-D tensor) |
+| `a.log()` | Natural logarithm element-wise |
+
+### Softmax
+
+Applies the softmax function row-wise to a 2-D tensor. Each row is normalized so its elements sum to 1, using the numerically stable formulation `exp(x - max(x)) / sum(exp(x - max(x)))`.
+
+```python
+logits = Tensor([[1.0, 2.0, 3.0], [1.0, 1.0, 1.0]], requires_grad=True)
+probs = logits.softmax()
+# Each row sums to 1.0
+```
+
+Supports backpropagation using the Jacobian-vector product.
+
+### Log
+
+Computes the natural logarithm element-wise. Useful for log-likelihood computations.
+
+```python
+t = Tensor([1.0, 2.718, 7.389], requires_grad=True)
+log_t = t.log()
+```
+
+Supports backpropagation with gradient `1/x`.
 
 ## Autograd
 
@@ -95,13 +126,52 @@ t.to(Device("GPU"))   # move to GPU in-place
 t.to(Device("CPU"))   # move back to CPU in-place
 ```
 
+## Reduction Methods
+
+| Method | Description |
+|---|---|
+| `sum()` | Sum all elements, returns a scalar tensor (differentiable) |
+| `mean()` | Mean of all elements, returns a scalar tensor (differentiable) |
+| `item()` | Extract a Python float from a single-element tensor |
+
+```python
+t = Tensor([1.0, 2.0, 3.0], requires_grad=True)
+s = t.sum()       # Tensor(data=6.0)
+m = t.mean()      # Tensor(data=2.0)
+v = s.item()      # 6.0 (Python float)
+```
+
 ## Other Methods
 
 | Method | Description |
 |---|---|
 | `reshape(shape)` | Returns a reshaped tensor (differentiable) |
+| `clip(minv, maxv)` | Clamp values element-wise between `minv` and `maxv` (differentiable) |
+| `detach(requires_grad=False)` | Return a new tensor disconnected from the computation graph |
 | `tolist()` | Converts data to a Python list |
 | `zero_grad()` | Sets `self.grad = None` |
+
+### Clip
+
+Clamps tensor values element-wise. Both `minv` and `maxv` can be `Tensor` objects or scalars.
+
+```python
+t = Tensor([0.1, 0.5, 0.9, 1.5], requires_grad=True)
+clamped = t.clip(Tensor([0.2]), Tensor([1.0]))
+# Tensor(data=[0.2, 0.5, 0.9, 1.0])
+```
+
+Supports backpropagation — gradients pass through only where the value was not clamped.
+
+### Detach
+
+Creates a copy of the tensor that is disconnected from the computation graph. Useful for stopping gradient flow.
+
+```python
+t = Tensor([1.0, 2.0], requires_grad=True)
+d = t.detach()
+print(d.requires_grad)  # False
+```
 
 ## Factory Functions
 
