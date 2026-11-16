@@ -1,4 +1,4 @@
-# krnl 0.7.1 Documentation
+# krnl 0.7.1 [Latest] Documentation
 
 `krnl` is a lightweight, educational machine learning library written in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation.
 
