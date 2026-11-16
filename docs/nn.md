@@ -130,6 +130,19 @@ y = sigmoid(x)
 
 Supports backpropagation with the derivative `sigmoid(x) * (1 - sigmoid(x))`.
 
+## Softmax
+
+Row-wise softmax activation: normalizes each row so its elements sum to 1. Uses the numerically stable formulation `exp(x - max(x)) / sum(exp(x - max(x)))`.
+
+Requires a 2-D input tensor.
+
+```python
+softmax = nn.Softmax()
+y = softmax(x)  # each row of y sums to 1.0
+```
+
+Supports backpropagation using the Jacobian-vector product. On GPU, this uses a dedicated OpenCL kernel for efficient row-wise computation.
+
 ## Tanh
 
 Elementwise hyperbolic tangent activation: `tanh(x) = 2 * sigmoid(2x) - 1`.
