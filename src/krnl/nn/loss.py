@@ -46,7 +46,6 @@ class HuberLoss(BaseCriterion):
         if predicted.data.shape != target.data.shape:
             raise ValueError("Predicted and target tensors must have the same shape.")
         error = predicted - target
-        abs_error = abs(error)
         quadratic = error ** 2 * 0.5
         return self._reduce(quadratic)
 
