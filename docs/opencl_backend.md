@@ -24,14 +24,15 @@ from krnl.backends.GPU_processer import OpenCLBackend
 backend = OpenCLBackend.instance(device_id=0)
 ```
 
-The backend compiles four OpenCL kernel programs at initialization:
+The backend compiles five OpenCL kernel programs at initialization:
 
 | Program | Kernels |
 |---|---|
-| `elementwise_program` | `add_f32`, `sub_f32`, `mul_f32`, `div_f32`, `neg_f32`, `abs_f32`, `pow_f32`, `relu_f32`, `sigmoid_f32`, `fill_f32`, `mul_scalar_f32`, `add_row_bias_f32`, `sum_to_row_f32` |
+| `elementwise_program` | `add_f32`, `sub_f32`, `mul_f32`, `div_f32`, `neg_f32`, `abs_f32`, `pow_f32`, `log_f32`, `relu_f32`, `sigmoid_f32`, `fill_f32`, `mul_scalar_f32`, `add_row_bias_f32`, `sum_to_row_f32` |
 | `matmul_program` | `matmul_f32` |
 | `transpose_program` | `transpose_f32` |
 | `elementwise_scaler_program` | `add_scalar_f32`, `sub_scalar_f32`, `div_scalar_f32` |
+| `softmax_program` | `softmax_f32` |
 
 #### Key Methods
 
@@ -52,8 +53,10 @@ The backend compiles four OpenCL kernel programs at initialization:
 | `add_scalar(a, scalar)` | Add scalar |
 | `sub_scalar(a, scalar)` | Subtract scalar |
 | `div_scalar(a, scalar)` | Divide by scalar |
+| `log(a)` | Element-wise natural logarithm |
 | `relu(a)` | Element-wise ReLU |
 | `sigmoid(a)` | Element-wise sigmoid |
+| `softmax(a)` | Row-wise softmax (2-D arrays only) |
 | `fill(shape, value)` | Create array filled with a value |
 | `matmul(a, b)` | Matrix multiplication (uses PyCLBlast if available) |
 | `transpose(a)` | 2-D matrix transpose |
@@ -98,7 +101,9 @@ e = a @ b_2d     # matrix multiply
 | `reshape(shape)` | Reshape the array |
 | `sum()` | Sum all elements |
 | `mean()` | Mean of all elements |
+| `log()` | Element-wise natural logarithm |
 | `sigmoid()` | Element-wise sigmoid |
+| `softmax()` | Row-wise softmax (2-D arrays only) |
 | `relu()` | Element-wise ReLU |
 | `tolist()` | Convert to Python list (transfers to host) |
 
