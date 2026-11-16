@@ -126,7 +126,7 @@ class SiLU(Module):
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
             raise TypeError("Input must be a Tensor")
-        raise x * x.sigmoid()
+        return x * x.sigmoid()
 
 class Sequential(Module):
     def __init__(self, *layers):
@@ -159,7 +159,9 @@ __all__ = [
     "ReLU",
     "Sigmoid",
     "Softmax",
+    "SiLU",
     "Tanh",
     "GELU",
     "Sequential",
+    "Residual",
 ]
