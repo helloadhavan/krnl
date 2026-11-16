@@ -15,7 +15,7 @@ class Module:
     def __init__(self, eval: bool = False):
         self._parameters = {}
         self.states = {}
-        self.eval = eval
+        self._eval = eval
 
     def register_parameter(self, name: str, parameter: Parameter) -> None:
         if not isinstance(parameter, Parameter):
@@ -37,11 +37,14 @@ class Module:
         self.states = dic.get("states") or {}
 
     def train(self):
-        self.eval = False
+        self._eval = False
 
     def eval(self):
-        self.eval = True
+        self._eval = True
 
+    @property
+    def training(self):
+        return not self._eval
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
