@@ -40,8 +40,10 @@ from krnl import nn
 | `nn.Sigmoid` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Sigmoid activation |
 | `nn.Softmax` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Row-wise softmax activation (2-D tensors) |
 | `nn.Tanh` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Hyperbolic tangent activation |
+| `nn.SiLU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Sigmoid Linear Unit (Swish) activation |
 | `nn.GELU` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Gaussian Error Linear Unit activation (sigmoid approx.) |
 | `nn.Sequential` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Container that chains layers in order |
+| `nn.Residual` | [`model_utils.py`](../src/krnl/nn/model_utils.py) | Skip connection wrapper: `x + model(x)` |
 
 ### Loss Functions
 
@@ -51,6 +53,7 @@ from krnl import nn
 | `nn.MAELoss` | [`loss.py`](../src/krnl/nn/loss.py) | Mean Absolute Error |
 | `nn.HuberLoss` | [`loss.py`](../src/krnl/nn/loss.py) | Huber loss (smooth L1) |
 | `nn.BCELoss` | [`loss.py`](../src/krnl/nn/loss.py) | Binary Cross-Entropy loss |
+| `nn.CrossEntropy` | [`loss.py`](../src/krnl/nn/loss.py) | Cross-Entropy loss for multi-class classification |
 | `nn.loss.BaseCriterion` | [`loss.py`](../src/krnl/nn/loss.py) | Abstract base for custom losses |
 
 ### Optimizers

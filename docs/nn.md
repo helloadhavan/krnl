@@ -38,6 +38,9 @@ class MyModel(nn.Module):
 | `register_parameter(name, parameter)` | Register a named `Parameter` on the module |
 | `forward(x)` | Override this to define the forward pass |
 | `zero_grad()` | Set all parameter gradients to `None` |
+| `train()` | Set the module to training mode (`_eval = False`) |
+| `eval()` | Set the module to evaluation mode (`_eval = True`) |
+| `training` | Property — returns `True` when in training mode |
 | `get_model_state_dict()` | Return a dict with `"states"` and `"parameters"` |
 | `register_state_dict(dict)` | Restore parameters and states from a dict |
 | `__call__(x)` | Calls `forward(x)` |
@@ -169,6 +172,19 @@ y = gelu(x)
 
 Supports backpropagation through the computation graph automatically.
 
+## SiLU
+
+Sigmoid Linear Unit (also known as Swish) activation: `SiLU(x) = x * sigmoid(x)`.
+
+SiLU is a smooth, self-gated activation function. It tends to work better than ReLU in deeper networks and is used in architectures like EfficientNet.
+
+```python
+silu = nn.SiLU()
+y = silu(x)
+```
+
+Supports backpropagation through the computation graph automatically.
+
 ## Sequential
 
 A container that chains multiple layers and executes them in order. It automatically collects parameters from all child `Module` instances, making it easy to pass them to an optimizer.
@@ -214,3 +230,32 @@ seq = nn.Sequential(
 print(list(seq._parameters.keys()))
 # ['layer_0_weight', 'layer_0_bias', 'layer_2_weight', 'layer_2_bias']
 ```
+
+## Residual
+
+A wrapper that adds a skip (residual) connection around a sub-module. The output is `x + model(x)`, enabling gradient flow through the identity path.
+
+```python
+from krnl import nn
+
+block = nn.Residual(
+    nn.Sequential(
+        nn.Linear(8, 8, bias=True),
+        nn.ReLU(),
+    )
+)
+
+y = block(x)  # y = x + ReLU(Linear(x))
+```
+
+### Constructor
+
+```python
+Residual(model)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `model` | `Module` or `Sequential` | The sub-module to wrap with a skip connection |
+
+The input and output dimensions of the wrapped model must match, since the residual adds them element-wise.

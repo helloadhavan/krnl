@@ -17,7 +17,7 @@
 - [Tensor](tensor.md) — the core data structure and autograd engine
 - [Device](device.md) — CPU and GPU device abstraction
 - [Neural Network Modules](nn.md) — layers, activations, and the `Module` base class
-- [Loss Functions](loss.md) — MSE, MAE, Huber, and BCE loss
+- [Loss Functions](loss.md) — MSE, MAE, Huber, BCE and cross-entropy loss
 - [Optimizers](optimizers.md) — SGD, Adam, Muon, and MuonAdam
 - [Saving and Loading](saving_loading.md) — persisting and restoring model and optimizer state
 - [OpenCL Backend](opencl_backend.md) — GPU computation via PyOpenCL

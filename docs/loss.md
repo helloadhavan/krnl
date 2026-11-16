@@ -164,6 +164,39 @@ loss.backward()
 optimizer.step()
 ```
 
+## CrossEntropy
+
+Cross-Entropy Loss for multi-class classification. Computes `-(target * log(predicted)).sum()` per sample.
+
+If predictions are outside `[0, 1]`, softmax is automatically applied. Predictions are clamped to `[epsilon, 1 - epsilon]` for numerical stability.
+
+```python
+criterion = nn.CrossEntropy()
+
+predicted = Tensor([[0.1, 0.7, 0.2]])  # class probabilities
+target = Tensor([[0.0, 1.0, 0.0]])     # one-hot encoded labels
+
+loss = criterion(predicted, target)
+loss.backward()
+```
+
+### Constructor
+
+```python
+CrossEntropy(reduction="mean", epsilon=1e-15)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `reduction` | `str` | `"mean"` | Reduction mode: `"mean"`, `"sum"`, or `"none"` |
+| `epsilon` | `float` | `1e-15` | Small value for numerical stability |
+
+### Requirements
+
+- `predicted` and `target` must have the same shape
+- `target` should be one-hot encoded
+- If predictions are not valid probabilities, softmax is applied automatically
+
 ## BaseCriterion
 
 All loss functions inherit from `BaseCriterion`. To create a custom loss:
