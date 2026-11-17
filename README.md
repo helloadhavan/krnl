@@ -1,6 +1,7 @@
 # krnl
 
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/krnl?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/krnl)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/krnl?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/krnl) 
+![python](https://img.shields.io/badge/language-python-blue?style=flat-square)
 
 `krnl` is a lightweight, educational machine learning library written in Python on top of NumPy, with experimental OpenCL support for device-aware tensor computation.
 
