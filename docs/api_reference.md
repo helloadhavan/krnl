@@ -22,6 +22,87 @@ import krnl
 | `krnl.OpenCLBackend` | class | Low-level OpenCL backend (advanced) |
 | `krnl.get_gpu_info` | function | List available OpenCL GPUs |
 | `krnl.nn` | module | Neural network building blocks |
+| `krnl.data` | module | Dataset and DataLoader utilities |
+| `krnl.train` | module | Trainer and TrainerArguments |
+
+## krnl.data
+
+```python
+from krnl.data import Dataset, DataLoader
+```
+
+| Name | Source | Description |
+|---|---|---|
+| `Dataset` | [`dataset.py`](../src/krnl/data/dataset.py) | Container pairing input and label tensors |
+| `DataLoader` | [`dataloader.py`](../src/krnl/data/dataloader.py) | Mini-batch iterator with shuffling and drop-last support |
+
+### Dataset
+
+```python
+Dataset(inputs: Tensor, labels: Tensor)
+```
+
+| Method | Returns | Description |
+|---|---|---|
+| `__getitem__(item)` | `(Tensor, Tensor)` | Index or slice into inputs and labels |
+
+### DataLoader
+
+```python
+DataLoader(dataset, batch_size=32, shuffle=False, drop_last=False)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `dataset` | `Dataset` | — | Dataset to iterate over |
+| `batch_size` | `int` | `32` | Samples per batch |
+| `shuffle` | `bool` | `False` | Shuffle indices each pass |
+| `drop_last` | `bool` | `False` | Drop last incomplete batch |
+
+| Method | Returns | Description |
+|---|---|---|
+| `__len__()` | `int` | Number of batches |
+| `__iter__()` | iterator | Yields `(inputs, labels, batch_start)` tuples |
+
+## krnl.train
+
+```python
+from krnl.train import Trainer, TrainerArguments
+```
+
+| Name | Source | Description |
+|---|---|---|
+| `TrainerArguments` | [`args.py`](../src/krnl/train/args.py) | Training hyperparameters (lr, epochs, optimizer, loss) |
+| `Trainer` | [`trainer.py`](../src/krnl/train/trainer.py) | High-level training loop over a DataLoader |
+
+### TrainerArguments
+
+```python
+TrainerArguments(learning_rate=3e-4, batch_size=32, num_epochs=10, optimizer="adam", loss_function="mse")
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `learning_rate` | `float` | `3e-4` | Optimizer step size |
+| `batch_size` | `int` | `32` | Batch size (informational) |
+| `num_epochs` | `int` | `10` | Number of training epochs |
+| `optimizer` | `str` | `"adam"` | `"adam"`, `"sgd"`, `"muon"`, or `"muon_adam"` |
+| `loss_function` | `str` or `BaseCriterion` | `"mse"` | `"mse"`, `"mae"`, `"huber"`, or a criterion instance |
+
+| Method | Returns | Description |
+|---|---|---|
+| `build_optimizer(parameters)` | `Optimizer` | Instantiate the configured optimizer |
+
+### Trainer
+
+```python
+Trainer(model: Module, data_loader: DataLoader, args: TrainerArguments)
+```
+
+| Method | Returns | Description |
+|---|---|---|
+| `train(log_epochs=1, log_steps=None)` | `None` | Run the full training loop |
+| `validate(val_inputs, val_targets)` | `Tensor` | Compute validation loss (no gradient update) |
 
 ## krnl.nn
 
