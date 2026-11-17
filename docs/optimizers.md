@@ -140,6 +140,8 @@ optimizer = nn.optim.MuonAdam(
 
 ## Typical Training Loop
 
+### Manual loop
+
 ```python
 from krnl import nn, Tensor
 
@@ -158,3 +160,37 @@ for epoch in range(100):
     loss.backward()
     optimizer.step()
 ```
+
+### Using Trainer
+
+For mini-batch training over a dataset, use `Trainer` and `TrainerArguments` to avoid writing the loop yourself:
+
+```python
+import numpy as np
+from krnl import nn, Tensor
+from krnl.data import Dataset, DataLoader
+from krnl.train import Trainer, TrainerArguments
+
+inputs = Tensor(np.random.randn(100, 4).astype(np.float32))
+labels = Tensor(np.random.randn(100, 1).astype(np.float32))
+
+loader = DataLoader(Dataset(inputs, labels), batch_size=16, shuffle=True)
+
+model = nn.Sequential(
+    nn.Linear(4, 8, bias=True),
+    nn.ReLU(),
+    nn.Linear(8, 1, bias=True),
+)
+
+args = TrainerArguments(
+    learning_rate=0.001,
+    num_epochs=100,
+    optimizer="adam",       # any of "adam", "sgd", "muon", "muon_adam"
+    loss_function="mse",
+)
+
+trainer = Trainer(model, loader, args)
+trainer.train(log_epochs=20)
+```
+
+See [Training](training.md) for full details on `Trainer` and `TrainerArguments`.
