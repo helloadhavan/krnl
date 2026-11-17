@@ -444,6 +444,53 @@ class Tensor:
             value = self._ensure_tensor(value)
         return np.all(self.data < value.data)
 
+    def __getitem__(self, key):
+        if self.device.device == "GPU":
+            indexed_data = self.data[key]
+        else:
+            indexed_data = self.data[key]
+
+        out = Tensor(
+            indexed_data,
+            device=self.device,
+            requires_grad=self.requires_grad,
+            _children=(self,),
+            _op="index",
+        )
+
+        if self.requires_grad:
+            def _backward():
+                if self.device.device == "GPU":
+                    grad_np = np.asarray(out.grad.data.get() if hasattr(out.grad.data, 'get') else out.grad.data, dtype=np.float32)
+                    self_grad = np.zeros(self.data.shape, dtype=np.float32)
+                    if isinstance(key, (int, np.integer)):
+                        self_grad[key] += grad_np.reshape(self_grad[key].shape)
+                    elif isinstance(key, slice):
+                        indices = np.arange(*key.indices(self.data.shape[0]))
+                        for i, idx in enumerate(indices):
+                            self_grad[idx] += grad_np[i]
+                    elif isinstance(key, (list, np.ndarray)):
+                        np.add.at(self_grad, key, grad_np)
+                    else:
+                        self_grad[key] += grad_np
+                    grad_tensor = Tensor(self_grad, device=self.device)
+                    self._accumulate_grad(self, grad_tensor)
+                else:
+                    grad = np.zeros_like(self.data)
+                    if isinstance(key, (int, np.integer)):
+                        grad[key] += np.asarray(out.grad.data).reshape(grad[key].shape)
+                    elif isinstance(key, slice):
+                        grad[key] += np.asarray(out.grad.data)
+                    elif isinstance(key, (list, np.ndarray)):
+                        np.add.at(grad, key, np.asarray(out.grad.data))
+                    else:
+                        grad[key] += np.asarray(out.grad.data)
+                    self._accumulate_grad(self, Tensor(grad, device=self.device))
+
+            out._backward = _backward
+
+        return out
+
     def __repr__(self):
         return f"Tensor(data={self.data}, grad={self.grad}, requires_grad={self.requires_grad})"
 
