@@ -14,6 +14,8 @@ nav:
   - Neural Networks: nn.md
   - Loss Functions: loss.md
   - Optimizers: optimizers.md
+  - Dataset and DataLoader: data.md
+  - Training: training.md
   - Devices: device.md
   - OpenCL Backend: opencl_backend.md
   - Saving and Loading: saving_loading.md
