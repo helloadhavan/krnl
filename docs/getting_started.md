@@ -79,6 +79,44 @@ loss.backward()
 optimizer.step()
 ```
 
+## Training with Dataset, DataLoader, and Trainer
+
+For larger datasets you can use `Dataset`, `DataLoader`, and `Trainer` to handle mini-batch iteration and the training loop automatically:
+
+```python
+import numpy as np
+from krnl import nn, Tensor
+from krnl.data import Dataset, DataLoader
+from krnl.train import Trainer, TrainerArguments
+
+# Prepare data
+X = np.random.randn(100, 1).astype(np.float32)
+y = (2 * X + 1 + 0.1 * np.random.randn(100, 1)).astype(np.float32)
+
+dataset = Dataset(Tensor(X), Tensor(y))
+loader  = DataLoader(dataset, batch_size=16, shuffle=True)
+
+# Build model
+model = nn.Sequential(
+    nn.Linear(1, 8, bias=True),
+    nn.ReLU(),
+    nn.Linear(8, 1, bias=True),
+)
+
+# Configure and run training
+args = TrainerArguments(
+    learning_rate=0.01,
+    num_epochs=50,
+    optimizer="adam",
+    loss_function="mse",
+)
+
+trainer = Trainer(model, loader, args)
+trainer.train(log_epochs=10)
+```
+
+See [Dataset and DataLoader](data.md) and [Training](training.md) for full details.
+
 ## Saving and Loading
 
 ```python
