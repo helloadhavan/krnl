@@ -17,6 +17,8 @@ The project intentionally stays small, readable, and easy to follow rather than 
 - Neural network building blocks (Linear, ReLU, Sigmoid, Softmax, Tanh, GELU, SiLU, Sequential, Residual)
 - Loss functions (MSE, MAE, Huber, BCE, CrossEntropy)
 - Optimizers (SGD, Adam, Muon, MuonAdam, MuonAdamAux)
+- Dataset and DataLoader for mini-batch training
+- High-level Trainer API with configurable training arguments
 - Model saving and loading
 
 ## Installation
@@ -167,6 +169,70 @@ from krnl import nn
 optimizer = nn.optim.Adam(model._parameters.values(), learning_rate=0.001)
 ```
 
+## Dataset and DataLoader
+
+`Dataset` wraps input and label tensors, while `DataLoader` iterates over a dataset in shuffled mini-batches.
+
+```python
+import numpy as np
+from krnl import Tensor
+from krnl.data import Dataset, DataLoader
+
+inputs = Tensor(np.random.randn(100, 4).astype(np.float32))
+labels = Tensor(np.random.randn(100, 1).astype(np.float32))
+
+dataset = Dataset(inputs, labels)
+loader  = DataLoader(dataset, batch_size=16, shuffle=True, drop_last=False)
+
+for batch_inputs, batch_labels, batch_idx in loader:
+    print(batch_inputs.shape, batch_labels.shape)
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `batch_size` | `32` | Samples per batch |
+| `shuffle` | `False` | Shuffle indices each pass |
+| `drop_last` | `False` | Drop the last incomplete batch |
+
+## Trainer
+
+The `Trainer` class provides a high-level training loop that handles forward passes, loss computation, backpropagation, and optimizer steps automatically.
+
+```python
+from krnl import nn
+from krnl.data import Dataset, DataLoader
+from krnl.train import Trainer, TrainerArguments
+
+model = nn.Sequential(
+    nn.Linear(4, 8, bias=True),
+    nn.ReLU(),
+    nn.Linear(8, 1, bias=True),
+)
+
+dataset = Dataset(inputs, labels)
+loader  = DataLoader(dataset, batch_size=16, shuffle=True)
+
+args = TrainerArguments(
+    learning_rate=0.01,
+    num_epochs=50,
+    optimizer="adam",
+    loss_function="mse",
+)
+
+trainer = Trainer(model, loader, args)
+trainer.train(log_epochs=10)
+```
+
+`TrainerArguments` accepts:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `learning_rate` | `3e-4` | Optimizer step size |
+| `batch_size` | `32` | Batch size (informational) |
+| `num_epochs` | `10` | Number of training epochs |
+| `optimizer` | `"adam"` | `"adam"`, `"sgd"`, `"muon"`, or `"muon_adam"` |
+| `loss_function` | `"mse"` | `"mse"`, `"mae"`, `"huber"`, or a `BaseCriterion` instance |
+
 ## Saving and loading
 
 ```python
@@ -193,13 +259,16 @@ krnl/
 │   │   ├── kernels.py         # OpenCL kernel source code
 │   │   ├── save.py            # Model serialization
 │   │   └── load.py            # Model deserialization
+│   ├── data/
+│   │   ├── dataset.py         # Dataset class
+│   │   └── dataloader.py      # DataLoader for mini-batch iteration
 │   ├── nn/
 │   │   ├── model_utils.py     # Module, Linear, activations
 │   │   ├── loss.py            # Loss functions
 │   │   └── optim.py           # Optimizers
 │   └── train/
-│       ├── trainer.py         # Training utilities
-│       └── args.py            # Training arguments
+│       ├── trainer.py         # High-level training loop
+│       └── args.py            # Training arguments / hyperparameters
 ├── tests/
 ├── docs/
 ├── pyproject.toml
