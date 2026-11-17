@@ -568,6 +568,58 @@ class OpenCLBackend:
 
         return out
 
+    def index_select(self, a, indices):
+        """
+        Gather rows from a 2-D array by integer indices.
+
+        Parameters
+        ----------
+        a : cl_array.Array
+            Source 2-D array of shape (rows, cols).
+        indices : numpy.ndarray
+            1-D integer array of row indices to select.
+
+        Returns
+        -------
+        cl_array.Array
+            Output array of shape (len(indices), cols).
+        """
+        a = self._validate_array(a)
+
+        if a.ndim != 2:
+            raise ValueError(
+                "index_select currently supports 2-D arrays only"
+            )
+
+        indices_np = np.asarray(indices, dtype=np.int32)
+        num_indices = len(indices_np)
+        cols = a.shape[1]
+
+        indices_buf = cl_array.to_device(
+            self.queue, indices_np
+        )
+
+        out = cl_array.empty(
+            self.queue,
+            (num_indices, cols),
+            dtype=np.float32,
+        )
+
+        total = num_indices * cols
+
+        self.index_program.index_select_f32(
+            self.queue,
+            (int(total),),
+            None,
+            a.data,
+            indices_buf.data,
+            out.data,
+            np.uint32(num_indices),
+            np.uint32(cols),
+        )
+
+        return out
+
     def transpose(self, a):
         """
         Transpose a 2-D array into a contiguous GPU array.
@@ -946,6 +998,35 @@ class GPUArray:
             self.backend.softmax(self.array),
             backend=self.backend,
         )
+
+    def index_select(self, indices):
+        """Select rows by integer indices using the GPU kernel."""
+        return GPUArray(
+            self.backend.index_select(self.array, indices),
+            backend=self.backend,
+        )
+
+    def __getitem__(self, key):
+        if isinstance(key, (int, np.integer)):
+            # Single row → use index_select with one-element array
+            if self.ndim == 1:
+                return self.array.get()[int(key)]
+            return self.index_select(np.array([int(key)]))
+
+        if isinstance(key, slice):
+            indices = np.arange(*key.indices(self.shape[0]), dtype=np.int32)
+            if len(indices) == 0:
+                return GPUArray(
+                    np.empty((0,) + self.shape[1:], dtype=np.float32),
+                    backend=self.backend,
+                )
+            return self.index_select(indices)
+
+        if isinstance(key, (list, np.ndarray)):
+            indices = np.asarray(key, dtype=np.int32)
+            return self.index_select(indices)
+
+        raise TypeError(f"Unsupported index type: {type(key)!r}")
 
     def sigmoid(self):
         return GPUArray(
