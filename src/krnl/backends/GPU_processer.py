@@ -16,6 +16,7 @@ from .kernels import (
     TRANSPOSE_KERNEL,
     ELEMENTWISE_SCALER_KERNELS,
     SOFTMAX_KERNEL,
+    INDEX_KERNEL,
 )
 
 
@@ -100,6 +101,11 @@ class OpenCLBackend:
         self.softmax_program = cl.Program(
             self.context,
             SOFTMAX_KERNEL,
+        ).build()
+
+        self.index_program = cl.Program(
+            self.context,
+            INDEX_KERNEL,
         ).build()
 
     @staticmethod
