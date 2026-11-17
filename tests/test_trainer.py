@@ -2,7 +2,7 @@ import numpy as np
 from krnl.backends.tensor import Tensor
 from krnl.data.dataset import Dataset
 from krnl.data.dataloader import DataLoader
-from krnl.nn.model_utils import Linear, Sequential, ReLU
+from krnl.nn.model_utils import Linear, Sequential, GELU
 from krnl.train.args import TrainerArguments
 from krnl.train.trainer import Trainer
 
@@ -17,7 +17,7 @@ def test_trainer_train_and_validate():
 
     model = Sequential(
         Linear(3, 4),
-        ReLU(),
+        GELU(),
         Linear(4, 1),
     )
 
