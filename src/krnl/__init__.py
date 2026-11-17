@@ -16,7 +16,7 @@ from .backends import (
     zeros_like,
 )
 
-__version__ = "0.7.1"
+__version__ = "0.8.1"
 __author__ = "Adhavan"
 __email__ = "helloadhavan@gmail.com"
 
