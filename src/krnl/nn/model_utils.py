@@ -177,6 +177,7 @@ __all__ = [
     "SiLU",
     "Tanh",
     "GELU",
+    "RMSNorm",
     "Sequential",
     "Residual",
 ]
