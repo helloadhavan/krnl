@@ -189,6 +189,50 @@ class Tensor:
     def __rmul__(self, other):
         return self * other
 
+    def __truediv__(self, other):
+        other = self._ensure_tensor(other)
+
+        if self.device.device == "GPU":
+            result_data = self.backend.div(self.data, other.data)
+        else:
+            result_data = self.data / other.data
+
+        out = Tensor(
+            result_data,
+            device=self.device,
+            requires_grad=(self.requires_grad or other.requires_grad),
+            _children=(self, other),
+            _op="/",
+        )
+
+        def _backward():
+            if self.requires_grad:
+                # d(a/b)/da = 1/b
+                if self.device.device == "GPU":
+                    grad = self.backend.div(out.grad, other.data)
+                else:
+                    grad = out.grad / other.data
+                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
+                self._accumulate_grad(self, grad)
+
+            if other.requires_grad:
+                # d(a/b)/db = -a / b^2
+                if self.device.device == "GPU":
+                    neg_self = self.backend.neg(self.data)
+                    b_sq = self.backend.mul(other.data, other.data)
+                    grad = self.backend.mul(out.grad, self.backend.div(neg_self, b_sq))
+                else:
+                    grad = out.grad * (-self.data / (other.data ** 2))
+                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
+                self._accumulate_grad(other, grad)
+
+        out._backward = _backward
+        return out
+
+    def __rtruediv__(self, other):
+        other = self._ensure_tensor(other)
+        return other / self
+
     def __matmul__(self, other):
         other = self._ensure_tensor(other)
 
