@@ -303,6 +303,20 @@ __kernel void div_scalar_f32(
         out[i] = a[i] / scalar;
     }
 }
+
+__kernel void sqrt_scalar_f32(
+    __global const float *a,
+    const float scalar,
+    __global float *out,
+    const uint n
+)
+{
+    const uint i = get_global_id(0);
+
+    if (i < n) {
+        out[i] = sqrt(a[i] * scalar);
+    }
+}
 """
 
 MATMUL_KERNEL = r"""
