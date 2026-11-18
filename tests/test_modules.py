@@ -56,6 +56,13 @@ def test_softmax():
     print("Softmax output:", y.tolist())
     assert abs(sum(y.tolist()[0]) - 1.0) < 1e-5
 
+def test_rmsnorm():
+    rmsnorm = nn.RMSNorm(dim=3)
+    x = Tensor([[1.0, 2.0, 3.0]])
+    y = rmsnorm(x)
+    print("RMSNorm output:", y.tolist())
+    assert y.shape == (1, 3)
+
 
 def test_sequential():
     model = nn.Sequential(
@@ -121,6 +128,7 @@ if __name__ == "__main__":
     test_gelu()
     test_silu()
     test_softmax()
+    test_rmsnorm()
     test_sequential()
     test_residual()
     test_parameter()
