@@ -143,6 +143,21 @@ class RMSNorm(Module):
         rms = ((x ** 2).mean() + self.epsilon) ** 0.5
         return (x / rms) * self._parameters["weights"]
 
+class LayerNorm(Module):
+    def __init__(self, dim, epsilon: float = 1e-5, device=Device("CPU")):
+        super().__init__()
+        self.epsilon = epsilon
+        self.register_parameter("weights", Parameter(rand(dim, device=device)))
+        self.register_parameter("bias", Parameter(rand(dim, device=device)))
+
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        mean = x.mean()
+        variance = ((x - mean) ** 2).mean()
+        normalized = (x - mean) / ((variance + self.epsilon) ** 0.5)
+        return normalized * self._parameters["weights"] + self._parameters["bias"]
+
 class Sequential(Module):
     def __init__(self, *layers):
         super().__init__()
