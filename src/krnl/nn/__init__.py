@@ -3,7 +3,7 @@ from . import model_utils
 from . import optim
 
 from .loss import MAELoss, MSELoss, HuberLoss, BCELoss, CrossEntropy
-from .model_utils import Linear, Module, Parameter, ReLU, Sigmoid, Softmax, SiLU, Tanh, GELU, Sequential, Residual
+from .model_utils import Linear, Module, Parameter, ReLU, Sigmoid, Softmax, SiLU, Tanh, GELU, RMSNorm, Sequential, Residual
 
 __all__ = [
     "loss",
@@ -18,6 +18,7 @@ __all__ = [
     "SiLU",
     "Tanh",
     "GELU",
+    "RMSNorm",
     "Sequential",
     "Residual",
     "MSELoss",
