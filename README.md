@@ -78,7 +78,7 @@ c.backward()
 print(a.grad)  # [3.0, 4.0]
 ```
 
-Key operations: `+`, `-`, `*`, `@`, `**`, `-x`, `abs()`, `relu()`, `sigmoid()`, `softmax()`, `log()`, `clip()`, `sum()`, `mean()`, `.T`, `reshape()`.
+Key operations: `+`, `-`, `*`, `/`, `@`, `**`, `-x`, `abs()`, `relu()`, `sigmoid()`, `softmax()`, `log()`, `clip()`, `sum()`, `mean()`, `.T`, `reshape()`.
 
 ### Device abstraction
 
