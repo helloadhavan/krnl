@@ -135,7 +135,7 @@ class RMSNorm(Module):
     def __init__(self, dim, epsilon: float = 1e-5, device=Device("CPU")):
         super().__init__()
         self.epsilon = epsilon
-        self.register_parameter("weights", rand(dim, device=device))
+        self.register_parameter("weights", Parameter(rand(dim, device=device)))
 
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
