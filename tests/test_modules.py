@@ -63,6 +63,13 @@ def test_rmsnorm():
     print("RMSNorm output:", y.tolist())
     assert y.shape == (1, 3)
 
+def test_layernorm():
+    layernorm = nn.LayerNorm(dim=3)
+    x = Tensor([[1.0, 2.0, 3.0]])
+    y = layernorm(x)
+    print("LayerNorm output:", y.tolist())
+    assert y.shape == (1, 3)
+
 
 def test_sequential():
     model = nn.Sequential(
@@ -129,6 +136,7 @@ if __name__ == "__main__":
     test_silu()
     test_softmax()
     test_rmsnorm()
+    test_layernorm()
     test_sequential()
     test_residual()
     test_parameter()
