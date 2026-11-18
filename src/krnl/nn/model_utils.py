@@ -193,6 +193,7 @@ __all__ = [
     "Tanh",
     "GELU",
     "RMSNorm",
+    "LayerNorm",
     "Sequential",
     "Residual",
 ]
