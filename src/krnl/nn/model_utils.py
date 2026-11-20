@@ -158,6 +158,27 @@ class LayerNorm(Module):
         normalized = (x - mean) / ((variance + self.epsilon) ** 0.5)
         return normalized * self._parameters["weights"] + self._parameters["bias"]
 
+class Embedding(Module):
+    def __init__(self, num_embeddings: int, embedding_dim: int, device=Device("CPU")):
+        super().__init__()
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+        self.device = device
+        self.register_parameter(
+            "weight", Parameter(rand((num_embeddings, embedding_dim), device=device))
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        if x.data.ndim != 1:
+            raise ValueError("Input tensor must be 1-dimensional.")
+        if not all(0 <= idx < self.num_embeddings for idx in x.data.tolist()):
+            raise ValueError(
+                f"All indices must be in the range [0, {self.num_embeddings - 1}]."
+            )
+        return self._parameters["weight"][x]
+
 class Sequential(Module):
     def __init__(self, *layers):
         super().__init__()
