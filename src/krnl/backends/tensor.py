@@ -769,3 +769,19 @@ def rand(shape, device=None) -> Tensor:
     shape = _normalize_shape(shape)
     data = np.random.rand(*shape).astype(np.float32)
     return _create_tensor_from_host(data, device)
+
+def zeros(shape, device=None) -> Tensor:
+    if device is None:
+        device = Device("CPU")
+
+    shape = _normalize_shape(shape)
+    data = np.zeros(shape, dtype=np.float32)
+    return _create_tensor_from_host(data, device)
+
+def ones(shape, device=None) -> Tensor:
+    if device is None:
+        device = Device("CPU")
+
+    shape = _normalize_shape(shape)
+    data = np.ones(shape, dtype=np.float32)
+    return _create_tensor_from_host(data, device)
