@@ -418,3 +418,129 @@ __kernel void index_select_f32(
     }
 }
 """
+
+IM2COL_KERNEL = r"""
+__kernel void im2col_f32(
+    __global const float *input,
+    __global float       *cols_out,
+    const uint N,
+    const uint C_in,
+    const uint H,
+    const uint W,
+    const uint kH,
+    const uint kW,
+    const uint stride,
+    const uint padding,
+    const uint H_out,
+    const uint W_out
+)
+{
+    /*
+     * Each work-item handles one element in the output column matrix.
+     * cols_out shape: (N * H_out * W_out,  C_in * kH * kW)
+     * Global ID maps to a flat index into that matrix.
+     */
+    const uint gid = get_global_id(0);
+    const uint col_w = C_in * kH * kW;          /* columns per row */
+    const uint total = N * H_out * W_out * col_w;
+
+    if (gid >= total) return;
+
+    /* Decode position in the output matrix */
+    const uint row   = gid / col_w;             /* which patch */
+    const uint col   = gid % col_w;             /* which element in patch */
+
+    const uint n     = row / (H_out * W_out);
+    const uint hw    = row % (H_out * W_out);
+    const uint h_out = hw / W_out;
+    const uint w_out = hw % W_out;
+
+    /* Decode channel / kernel position from col */
+    const uint c     = col / (kH * kW);
+    const uint kk    = col % (kH * kW);
+    const uint kh    = kk / kW;
+    const uint kw    = kk % kW;
+
+    /* Map back to input coordinates */
+    const int h_in = (int)(h_out * stride + kh) - (int)padding;
+    const int w_in = (int)(w_out * stride + kw) - (int)padding;
+
+    float val = 0.0f;
+    if (h_in >= 0 && h_in < (int)H && w_in >= 0 && w_in < (int)W) {
+        const uint input_idx = ((n * C_in + c) * H + (uint)h_in) * W + (uint)w_in;
+        val = input[input_idx];
+    }
+
+    cols_out[gid] = val;
+}
+"""
+
+COL2IM_KERNEL = r"""
+__kernel void col2im_f32(
+    __global const float *cols_in,
+    __global float       *output,
+    const uint N,
+    const uint C_in,
+    const uint H,
+    const uint W,
+    const uint kH,
+    const uint kW,
+    const uint stride,
+    const uint padding,
+    const uint H_out,
+    const uint W_out
+)
+{
+    /*
+     * Each work-item handles one element in the input gradient (N, C_in, H, W).
+     * We scatter-add from the column matrix back to the input.
+     */
+    const uint gid = get_global_id(0);
+    const uint total = N * C_in * H * W;
+
+    if (gid >= total) return;
+
+    /* Decode position in the input tensor */
+    const uint n = gid / (C_in * H * W);
+    const uint r = gid % (C_in * H * W);
+    const uint c = r / (H * W);
+    const uint hw = r % (H * W);
+    const uint h = hw / W;
+    const uint w = hw % W;
+
+    /* Padded coordinates */
+    const int h_pad = (int)h + (int)padding;
+    const int w_pad = (int)w + (int)padding;
+
+    const uint col_w = C_in * kH * kW;   /* columns per row in col matrix */
+
+    float val = 0.0f;
+
+    /* Iterate over all kernel positions that could have read this input pixel */
+    for (uint kh = 0; kh < kH; ++kh) {
+        for (uint kw = 0; kw < kW; ++kw) {
+            int h_out_candidate = h_pad - (int)kh;
+            int w_out_candidate = w_pad - (int)kw;
+
+            /* Check if this maps to a valid output position with the given stride */
+            if (h_out_candidate < 0 || w_out_candidate < 0) continue;
+            if (h_out_candidate % (int)stride != 0) continue;
+            if (w_out_candidate % (int)stride != 0) continue;
+
+            uint ho = (uint)h_out_candidate / stride;
+            uint wo = (uint)w_out_candidate / stride;
+
+            if (ho >= H_out || wo >= W_out) continue;
+
+            /* Row in the column matrix */
+            uint row = (n * H_out + ho) * W_out + wo;
+            /* Column in the column matrix */
+            uint col_idx = c * kH * kW + kh * kW + kw;
+
+            val += cols_in[row * col_w + col_idx];
+        }
+    }
+
+    output[gid] = val;
+}
+"""

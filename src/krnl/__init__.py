@@ -1,4 +1,4 @@
-"""krnl public package API."""
+"""krnl, A lightweight deep learning framework built on top of OpenCL for GPU acceleration. It provides a simple and efficient way to build and train neural networks using OpenCL-enabled devices."""
 
 from . import nn
 from . import train

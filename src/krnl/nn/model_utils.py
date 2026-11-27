@@ -89,46 +89,6 @@ class Linear(Module):
 
         return output
 
-class Conv2d(Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0, bias: bool = True, device=None):
-        super().__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.device = device if device is not None else Device("CPU")
-        self.bias = bias
-
-        weight_shape = (out_channels, in_channels, kernel_size, kernel_size)
-        weight_data = rand(weight_shape, device=self.device)
-        bias_data = rand((out_channels,), device=self.device) if bias else None
-
-        self.register_parameter("weight", Parameter(weight_data, device=self.device))
-        if bias:
-            self.register_parameter("bias", Parameter(bias_data, device=self.device))
-
-    def forward(self, x: Tensor) -> Tensor:
-        if not isinstance(x, Tensor):
-            raise TypeError("Input must be a Tensor.")
-
-        # Check input dimensions
-        if x.data.ndim != 4 or x.data.shape[1] != self.in_channels:
-            raise ValueError(
-                f"Expected input with shape (N, {self.in_channels}, H, W), "
-                f"got {x.data.shape}."
-            )
-
-        # Perform convolution operation (this is a placeholder; actual implementation would require more complex logic)
-        output = conv2d(x, self._parameters["weight"], stride=self.stride, padding=self.padding)
-
-        if self.bias:
-            bias = self._parameters["bias"]
-            output += bias.reshape((1, self.out_channels, 1, 1))
-
-        return output
-
-
 class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
         if not isinstance(x, Tensor):
