@@ -1,4 +1,5 @@
-from ..backends.tensor import Tensor, rand
+from random import randint
+from ..backends.tensor import Tensor, rand, zeros_like
 from ..backends.device import Device
 
 
@@ -129,6 +130,22 @@ class SiLU(Module):
         if not isinstance(x, Tensor):
             raise TypeError("Input must be a Tensor")
         return x * x.sigmoid()
+
+class Dropout(Module):
+    def __init__(self, p: float = 0.5):
+        super().__init__()
+        if not (0 <= p < 1):
+            raise ValueError("Dropout probability must be in the range [0, 1).")
+        self.p = p * 100  # Convert to percentage for easier comparison
+
+    def forward(self, x: Tensor) -> Tensor:
+        if not isinstance(x, Tensor):
+            raise TypeError("Input must be a Tensor.")
+        if self._eval:
+            return x
+        if randint(0, 100) < self.p:
+            return zeros_like(x)
+        return x
 
 class RMSNorm(Module):
     def __init__(self, dim, epsilon: float = 1e-5, device=Device("CPU")):
