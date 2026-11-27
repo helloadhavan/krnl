@@ -59,7 +59,7 @@ class Linear(Module):
         self.device = device if device is not None else Device("CPU")
         self.bias = bias
 
-        weight_data = rand((out_features, in_features), device=self.device)
+        weight_data = rand((in_features, out_features), device=self.device)
         bias_data = rand((out_features,), device=self.device) if bias else None
 
         self.register_parameter("weight", Parameter(weight_data, device=self.device))
@@ -77,8 +77,7 @@ class Linear(Module):
             )
 
         weight = self._parameters["weight"]
-        # weight shape is (out_features, in_features), transpose to (in_features, out_features)
-        output = x @ weight.T
+        output = x @ weight
 
         if self.bias:
             bias = self._parameters["bias"]
