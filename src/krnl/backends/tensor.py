@@ -8,6 +8,7 @@ from .GPU_processer import (
     OpenCLBackend,
 )
 from .device import Device
+from .grad import AutoGrad, GradEngine
 
 
 class Tensor:
@@ -18,6 +19,7 @@ class Tensor:
         requires_grad: bool = False,
         _children=(),
         _op: str = "",
+        grad_engine: GradEngine | None = None,
     ):
         if device is None:
             device = Device("CPU")
@@ -25,6 +27,7 @@ class Tensor:
         self.device = device
         self.requires_grad = requires_grad
         self.grad = None
+        self.grad_engine = grad_engine if grad_engine is not None else GradEngine()
 
         if self.device.device == "GPU":
             self.backend = OpenCLBackend.instance(
@@ -69,43 +72,14 @@ class Tensor:
                 raise ValueError("Both tensors must use the same device")
             return value
 
-        return Tensor(value, device=self.device, requires_grad=False)
-
-    @staticmethod
-    def _accumulate_grad(tensor, grad):
-        if tensor.grad is None:
-            tensor.grad = grad
-        else:
-            tensor.grad = tensor.grad + grad
-
-    @staticmethod
-    def _reduce_broadcasted_gradient(grad, target_shape):
-        if isinstance(grad, GPUArray):
-            if grad.shape == target_shape:
-                return grad
-            host = np.asarray(grad.get(), dtype=np.float32)
-            while host.ndim > len(target_shape):
-                host = host.sum(axis=0)
-            for axis, size in enumerate(target_shape):
-                if size == 1:
-                    host = host.sum(axis=axis, keepdims=True)
-            return GPUArray(host, backend=grad.backend)
-
-        while grad.ndim > len(target_shape):
-            grad = grad.sum(axis=0)
-
-        for axis, size in enumerate(target_shape):
-            if size == 1:
-                grad = grad.sum(axis=axis, keepdims=True)
-
-        return grad
+        return Tensor(value, device=self.device, requires_grad=False, grad_engine=self.grad_engine)
 
     def zero_grad(self):
         self.grad = None
 
     def detach(self, requires_grad=False):
         """Return a new Tensor with the same data but disconnected from the computation graph."""
-        return Tensor(self.data, device=self.device, requires_grad=requires_grad)
+        return Tensor(self.data, device=self.device, requires_grad=requires_grad, grad_engine=self.grad_engine)
 
     def __add__(self, other):
         other = self._ensure_tensor(other)
@@ -116,18 +90,10 @@ class Tensor:
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="+",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad:
-                grad = self._reduce_broadcasted_gradient(out.grad, self.data.shape)
-                self._accumulate_grad(self, grad)
-
-            if other.requires_grad:
-                grad = self._reduce_broadcasted_gradient(out.grad, other.data.shape)
-                self._accumulate_grad(other, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.add_backward(self, other, out)
         return out
 
     def __radd__(self, other):
@@ -142,19 +108,10 @@ class Tensor:
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="-",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad:
-                grad = self._reduce_broadcasted_gradient(out.grad, self.data.shape)
-                self._accumulate_grad(self, grad)
-
-            if other.requires_grad:
-                grad = -out.grad
-                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
-                self._accumulate_grad(other, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.sub_backward(self, other, out)
         return out
 
     def __rsub__(self, other):
@@ -170,20 +127,10 @@ class Tensor:
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="*",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad:
-                grad = out.grad * other.data
-                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
-                self._accumulate_grad(self, grad)
-
-            if other.requires_grad:
-                grad = out.grad * self.data
-                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
-                self._accumulate_grad(other, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.mul_backward(self, other, out)
         return out
 
     def __rmul__(self, other):
@@ -203,30 +150,10 @@ class Tensor:
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="/",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad:
-                # d(a/b)/da = 1/b
-                if self.device.device == "GPU":
-                    grad = self.backend.div(out.grad, other.data)
-                else:
-                    grad = out.grad / other.data
-                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
-                self._accumulate_grad(self, grad)
-
-            if other.requires_grad:
-                # d(a/b)/db = -a / b^2
-                if self.device.device == "GPU":
-                    neg_self = self.backend.neg(self.data)
-                    b_sq = self.backend.mul(other.data, other.data)
-                    grad = self.backend.mul(out.grad, self.backend.div(neg_self, b_sq))
-                else:
-                    grad = out.grad * (-self.data / (other.data ** 2))
-                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
-                self._accumulate_grad(other, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.div_backward(self, other, out)
         return out
 
     def __rtruediv__(self, other):
@@ -247,33 +174,10 @@ class Tensor:
             requires_grad=(self.requires_grad or other.requires_grad),
             _children=(self, other),
             _op="@",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.device.device == "GPU":
-                other_T = GPUArray(self.backend.transpose(other.data), backend=self.backend)
-                self_T = GPUArray(self.backend.transpose(self.data), backend=self.backend)
-            else:
-                other_T = other.data.T
-                self_T = self.data.T
-
-            if self.requires_grad:
-                if self.device.device == "GPU":
-                    grad = GPUArray(self.backend.matmul(out.grad, other_T), backend=self.backend)
-                else:
-                    grad = out.grad @ other_T
-                grad = self._reduce_broadcasted_gradient(grad, self.data.shape)
-                self._accumulate_grad(self, grad)
-
-            if other.requires_grad:
-                if self.device.device == "GPU":
-                    grad = GPUArray(self.backend.matmul(self_T, out.grad), backend=self.backend)
-                else:
-                    grad = self_T @ out.grad
-                grad = self._reduce_broadcasted_gradient(grad, other.data.shape)
-                self._accumulate_grad(other, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.matmul_backward(self, other, out)
         return out
 
     def __pow__(self, power):
@@ -286,45 +190,14 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op=f"**{power}",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad:
-                grad = out.grad * power * self.data ** (power - 1)
-                self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.pow_backward(self, power, out)
         return out
 
     def backward(self):
-        if self.data.size != 1:
-            raise ValueError("backward() requires a scalar output or loss")
-
-        topo = []
-        visited = set()
-
-        def build_topo(tensor):
-            if tensor in visited:
-                return
-
-            visited.add(tensor)
-
-            for parent in tensor._prev:
-                build_topo(parent)
-
-            topo.append(tensor)
-
-        build_topo(self)
-
-        if self.device.device == "CPU":
-            self.grad = np.ones_like(self.data, dtype=np.float32)
-        else:
-            self.grad = GPUArray.ones(
-                self.data.shape,
-                backend=self.backend,
-            )
-        for tensor in reversed(topo):
-            tensor._backward()
+        self.grad_engine.backward(self)
 
     def relu(self):
         out = Tensor(
@@ -333,17 +206,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="relu",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            mask = (self.data > 0).astype(np.float32)
-            grad = out.grad * mask
-            self.grad = grad if self.grad is None else self.grad + grad
-
-        out._backward = _backward
+        out._backward = AutoGrad.relu_backward(self, out)
         return out
 
     def sigmoid(self):
@@ -360,16 +226,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="sigmoid",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            grad = out.grad * out.data * (1.0 - out.data)
-            self.grad = grad if self.grad is None else self.grad + grad
-
-        out._backward = _backward
+        out._backward = AutoGrad.sigmoid_backward(self, out)
         return out
 
     def softmax(self):
@@ -390,18 +250,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="softmax",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            s = out.data
-            dot = (out.grad * s).sum(axis=1, keepdims=True)
-            grad = s * (out.grad - dot)
-            self._accumulate_grad(self, grad.astype(np.float32))
-
-        out._backward = _backward
+        out._backward = AutoGrad.softmax_backward(self, out)
         return out
 
     def log(self):
@@ -416,19 +268,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="log",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            if self.device.device == "GPU":
-                grad = self.backend.div(out.grad, self.data)
-            else:
-                grad = out.grad / self.data
-            self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.log_backward(self, out)
         return out
 
     def __abs__(self):
@@ -438,17 +281,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="abs",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            sign = np.sign(self.data).astype(np.float32)
-            grad = out.grad * sign
-            self.grad = grad if self.grad is None else self.grad + grad
-
-        out._backward = _backward
+        out._backward = AutoGrad.abs_backward(self, out)
         return out
 
     def __neg__(self):
@@ -463,19 +299,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="neg",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-
-            if self.device.device == "GPU":
-                grad = self.backend.neg(out.grad)
-            else:
-                grad = -out.grad
-            self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.neg_backward(self, out)
         return out
 
     def __gt__(self, value):
@@ -500,38 +327,11 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="index",
+            grad_engine=self.grad_engine,
         )
 
         if self.requires_grad:
-            def _backward():
-                if self.device.device == "GPU":
-                    grad_np = np.asarray(out.grad.data.get() if hasattr(out.grad.data, 'get') else out.grad.data, dtype=np.float32)
-                    self_grad = np.zeros(self.data.shape, dtype=np.float32)
-                    if isinstance(key, (int, np.integer)):
-                        self_grad[key] += grad_np.reshape(self_grad[key].shape)
-                    elif isinstance(key, slice):
-                        indices = np.arange(*key.indices(self.data.shape[0]))
-                        for i, idx in enumerate(indices):
-                            self_grad[idx] += grad_np[i]
-                    elif isinstance(key, (list, np.ndarray)):
-                        np.add.at(self_grad, key, grad_np)
-                    else:
-                        self_grad[key] += grad_np
-                    grad_tensor = Tensor(self_grad, device=self.device)
-                    self._accumulate_grad(self, grad_tensor)
-                else:
-                    grad = np.zeros_like(self.data)
-                    if isinstance(key, (int, np.integer)):
-                        grad[key] += np.asarray(out.grad.data).reshape(grad[key].shape)
-                    elif isinstance(key, slice):
-                        grad[key] += np.asarray(out.grad.data)
-                    elif isinstance(key, (list, np.ndarray)):
-                        np.add.at(grad, key, np.asarray(out.grad.data))
-                    else:
-                        grad[key] += np.asarray(out.grad.data)
-                    self._accumulate_grad(self, Tensor(grad, device=self.device))
-
-            out._backward = _backward
+            out._backward = AutoGrad.index_backward(self, key, out)
 
         return out
 
@@ -559,17 +359,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="T",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad and out.grad is not None:
-                if self.device.device == "GPU":
-                    grad = self.backend.transpose(out.grad)
-                else:
-                    grad = np.ascontiguousarray(out.grad.T)
-                self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.transpose_backward(self, out)
         return out
 
     def to(self, device: Device):
@@ -609,14 +402,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="reshape",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad and out.grad is not None:
-                grad = out.grad.reshape(self.data.shape)
-                self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.reshape_backward(self, out)
         return out
 
     def sum(self):
@@ -631,20 +420,10 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="sum",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if self.requires_grad and out.grad is not None:
-                if self.device.device == "GPU":
-                    grad = GPUArray(
-                        np.full(self.data.shape, out.grad.get().item(), dtype=np.float32),
-                        backend=self.backend,
-                    )
-                else:
-                    grad = np.full(self.data.shape, out.grad.item(), dtype=np.float32)
-                self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.sum_backward(self, out)
         return out
 
     def clip(self, minv, maxv):
@@ -663,18 +442,11 @@ class Tensor:
             requires_grad=self.requires_grad,
             _children=(self,),
             _op="clip",
+            grad_engine=self.grad_engine,
         )
 
-        def _backward():
-            if not self.requires_grad:
-                return
-            mask = ((self.data >= minv.data) & (self.data <= maxv.data)).astype(np.float32)
-            grad = out.grad * mask
-            self._accumulate_grad(self, grad)
-
-        out._backward = _backward
+        out._backward = AutoGrad.clip_backward(self, minv, maxv, out)
         return out
-
 
     def mean(self):
         n = self.data.size
