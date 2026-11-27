@@ -8,7 +8,7 @@ from .GPU_processer import (
     OpenCLBackend,
 )
 from .device import Device
-from .grad import self.grad_engine, GradEngine
+from .grad import AutoGrad, GradEngine
 
 
 class Tensor:
