@@ -8,7 +8,7 @@ from .GPU_processer import (
     OpenCLBackend,
 )
 from .device import Device
-from .grad import AutoGrad, GradEngine
+from .grad import self.grad_engine, GradEngine
 
 
 class Tensor:
@@ -93,7 +93,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.add_backward(self, other, out)
+        out._backward = self.grad_engine.add_backward(self, other, out)
         return out
 
     def __radd__(self, other):
@@ -111,7 +111,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.sub_backward(self, other, out)
+        out._backward = self.grad_engine.sub_backward(self, other, out)
         return out
 
     def __rsub__(self, other):
@@ -130,7 +130,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.mul_backward(self, other, out)
+        out._backward = self.grad_engine.mul_backward(self, other, out)
         return out
 
     def __rmul__(self, other):
@@ -153,7 +153,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.div_backward(self, other, out)
+        out._backward = self.grad_engine.div_backward(self, other, out)
         return out
 
     def __rtruediv__(self, other):
@@ -177,7 +177,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.matmul_backward(self, other, out)
+        out._backward = self.grad_engine.matmul_backward(self, other, out)
         return out
 
     def __pow__(self, power):
@@ -193,7 +193,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.pow_backward(self, power, out)
+        out._backward = self.grad_engine.pow_backward(self, power, out)
         return out
 
     def backward(self):
@@ -209,7 +209,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.relu_backward(self, out)
+        out._backward = self.grad_engine.relu_backward(self, out)
         return out
 
     def sigmoid(self):
@@ -229,7 +229,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.sigmoid_backward(self, out)
+        out._backward = self.grad_engine.sigmoid_backward(self, out)
         return out
 
     def softmax(self):
@@ -253,7 +253,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.softmax_backward(self, out)
+        out._backward = self.grad_engine.softmax_backward(self, out)
         return out
 
     def log(self):
@@ -271,7 +271,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.log_backward(self, out)
+        out._backward = self.grad_engine.log_backward(self, out)
         return out
 
     def __abs__(self):
@@ -284,7 +284,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.abs_backward(self, out)
+        out._backward = self.grad_engine.abs_backward(self, out)
         return out
 
     def __neg__(self):
@@ -302,7 +302,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.neg_backward(self, out)
+        out._backward = self.grad_engine.neg_backward(self, out)
         return out
 
     def __gt__(self, value):
@@ -331,7 +331,7 @@ class Tensor:
         )
 
         if self.requires_grad:
-            out._backward = AutoGrad.index_backward(self, key, out)
+            out._backward = self.grad_engine.index_backward(self, key, out)
 
         return out
 
@@ -362,7 +362,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.transpose_backward(self, out)
+        out._backward = self.grad_engine.transpose_backward(self, out)
         return out
 
     def to(self, device: Device):
@@ -405,7 +405,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.reshape_backward(self, out)
+        out._backward = self.grad_engine.reshape_backward(self, out)
         return out
 
     def sum(self):
@@ -423,7 +423,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.sum_backward(self, out)
+        out._backward = self.grad_engine.sum_backward(self, out)
         return out
 
     def clip(self, minv, maxv):
@@ -445,7 +445,7 @@ class Tensor:
             grad_engine=self.grad_engine,
         )
 
-        out._backward = AutoGrad.clip_backward(self, minv, maxv, out)
+        out._backward = self.grad_engine.clip_backward(self, minv, maxv, out)
         return out
 
     def mean(self):
